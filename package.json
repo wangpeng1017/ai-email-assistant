@@ -18,6 +18,8 @@
     "optimize-git": "node scripts/optimize-git.js",
     "git-monitor": "node scripts/git-performance-monitor.js",
     "validate-env": "node scripts/validate-env.js",
+    "create-test-user": "node scripts/create-production-test-user.js",
+    "verify-test-data": "node scripts/verify-test-data.js",
     "type-check": "tsc --noEmit"
   },
   "dependencies": {
