@@ -134,3 +134,66 @@ $$ LANGUAGE plpgsql;
 
 -- 添加函数注释
 COMMENT ON FUNCTION get_gmail_auth_status(UUID) IS '获取用户的Gmail认证状态';
+
+-- 创建附件推荐记录表
+CREATE TABLE IF NOT EXISTS attachment_recommendations (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+    lead_id UUID REFERENCES leads(id) ON DELETE CASCADE,
+    email_subject TEXT,
+    total_materials INTEGER DEFAULT 0,
+    matched_count INTEGER DEFAULT 0,
+    processing_time INTEGER DEFAULT 0,
+    recommendation_summary TEXT,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- 启用RLS
+ALTER TABLE attachment_recommendations ENABLE ROW LEVEL SECURITY;
+
+-- 附件推荐表的RLS策略
+CREATE POLICY "Users can only access their own attachment recommendations" ON attachment_recommendations
+    FOR ALL USING (auth.uid() = user_id);
+
+-- 创建批处理进度表
+CREATE TABLE IF NOT EXISTS batch_progress (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+    batch_id TEXT NOT NULL,
+    total_items INTEGER DEFAULT 0,
+    completed_items INTEGER DEFAULT 0,
+    failed_items INTEGER DEFAULT 0,
+    current_step TEXT,
+    current_item TEXT,
+    status TEXT DEFAULT 'running', -- 'running', 'completed', 'failed'
+    error_message TEXT,
+    started_at TIMESTAMPTZ DEFAULT NOW(),
+    completed_at TIMESTAMPTZ,
+
+    UNIQUE(user_id, batch_id)
+);
+
+-- 启用RLS
+ALTER TABLE batch_progress ENABLE ROW LEVEL SECURITY;
+
+-- 批处理进度表的RLS策略
+CREATE POLICY "Users can only access their own batch progress" ON batch_progress
+    FOR ALL USING (auth.uid() = user_id);
+
+-- 为产品资料表添加描述和关键词字段
+ALTER TABLE product_materials
+ADD COLUMN IF NOT EXISTS description TEXT,
+ADD COLUMN IF NOT EXISTS keywords TEXT[];
+
+-- 创建索引
+CREATE INDEX IF NOT EXISTS idx_attachment_recommendations_user_id ON attachment_recommendations(user_id);
+CREATE INDEX IF NOT EXISTS idx_attachment_recommendations_lead_id ON attachment_recommendations(lead_id);
+CREATE INDEX IF NOT EXISTS idx_batch_progress_user_batch ON batch_progress(user_id, batch_id);
+CREATE INDEX IF NOT EXISTS idx_batch_progress_status ON batch_progress(status);
+CREATE INDEX IF NOT EXISTS idx_product_materials_keywords ON product_materials USING GIN(keywords);
+
+-- 添加注释
+COMMENT ON TABLE attachment_recommendations IS '智能附件推荐记录';
+COMMENT ON TABLE batch_progress IS '批处理进度跟踪';
+COMMENT ON COLUMN product_materials.description IS '产品资料描述';
+COMMENT ON COLUMN product_materials.keywords IS '产品资料关键词数组';

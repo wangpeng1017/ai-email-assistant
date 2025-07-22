@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin, validateSupabaseConfig } from '@/lib/supabase'
 import { analyzeWebsite } from '@/lib/webAnalyzer'
 import { generateEmailContent, validateGeminiConfig } from '@/lib/aiGenerator'
+import { matchAttachments } from '@/lib/attachmentMatcher'
+import { createGmailOAuth2Client, setGmailCredentials, createEmailDraft } from '@/lib/gmailApi'
 
 export async function POST(request: NextRequest) {
   try {
