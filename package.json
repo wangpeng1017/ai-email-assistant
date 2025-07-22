@@ -22,6 +22,7 @@
     "verify-test-data": "node scripts/verify-test-data.js",
     "fix-oauth": "node scripts/fix-oauth-redirect.js",
     "verify-oauth": "node scripts/verify-oauth-config.js",
+    "fix-url-duplication": "node scripts/fix-url-duplication.js",
     "type-check": "tsc --noEmit"
   },
   "dependencies": {

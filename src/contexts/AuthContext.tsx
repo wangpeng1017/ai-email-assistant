@@ -61,14 +61,30 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   }
 
   const signInWithGoogle = async () => {
-    // 获取正确的重定向URL
+    // 获取正确的重定向URL，防止路径重复
     const getRedirectUrl = () => {
+      // 标准化URL函数，确保不会有重复的路径
+      const normalizeUrl = (baseUrl: string, path: string = '/dashboard') => {
+        // 移除baseUrl末尾的斜杠
+        const cleanBaseUrl = baseUrl.replace(/\/+$/, '');
+        // 确保path以斜杠开头
+        const cleanPath = path.startsWith('/') ? path : `/${path}`;
+        // 检查baseUrl是否已经包含了path
+        if (cleanBaseUrl.endsWith(cleanPath)) {
+          console.log('🔍 检测到URL已包含路径，避免重复:', cleanBaseUrl);
+          return cleanBaseUrl;
+        }
+        const finalUrl = `${cleanBaseUrl}${cleanPath}`;
+        console.log('🔧 构造重定向URL:', `${cleanBaseUrl} + ${cleanPath} = ${finalUrl}`);
+        return finalUrl;
+      };
+
       // 优先使用环境变量中的站点URL
       const siteUrl = process.env.NEXT_PUBLIC_SITE_URL;
 
       if (siteUrl) {
         console.log('🌐 使用环境变量站点URL:', siteUrl);
-        return `${siteUrl}/dashboard`;
+        return normalizeUrl(siteUrl);
       }
 
       // 如果没有环境变量，使用当前域名
@@ -79,18 +95,18 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         if (currentOrigin.includes('localhost')) {
           const productionUrl = 'https://ai-email-assistant-f-git-bf6853-wangpeng10170414-1653s-projects.vercel.app';
           console.log('🔄 从localhost重定向到生产环境:', productionUrl);
-          return `${productionUrl}/dashboard`;
+          return normalizeUrl(productionUrl);
         }
 
         // 使用当前域名
         console.log('📍 使用当前域名:', currentOrigin);
-        return `${currentOrigin}/dashboard`;
+        return normalizeUrl(currentOrigin);
       }
 
       // 服务器端渲染时的默认值
       const fallbackUrl = 'https://ai-email-assistant-f-git-bf6853-wangpeng10170414-1653s-projects.vercel.app';
       console.log('🔧 使用默认生产URL:', fallbackUrl);
-      return `${fallbackUrl}/dashboard`;
+      return normalizeUrl(fallbackUrl);
     };
 
     const redirectUrl = getRedirectUrl();
