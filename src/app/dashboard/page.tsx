@@ -2,7 +2,9 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
+import { useSearchParams } from 'next/navigation'
 import ProtectedRoute from '@/components/ProtectedRoute'
+import DashboardLayout from '@/components/DashboardLayout'
 import ManualInputForm from '@/components/ManualInputForm'
 import BatchImportForm from '@/components/BatchImportForm'
 import WebScrapingForm from '@/components/WebScrapingForm'
@@ -22,7 +24,10 @@ interface LeadStats {
 
 export default function Dashboard() {
   const { user, signOut } = useAuth()
-  const [activeTab, setActiveTab] = useState('manual')
+  const searchParams = useSearchParams()
+  const tabFromUrl = searchParams.get('tab')
+
+  const [activeTab, setActiveTab] = useState(tabFromUrl || 'manual')
   const [showForm, setShowForm] = useState(false)
   const [refreshKey, setRefreshKey] = useState(0)
   const [processing, setProcessing] = useState(false)
@@ -117,37 +122,39 @@ export default function Dashboard() {
     }
   }
 
+  // 根据URL参数确定当前视图
+  const getCurrentView = () => {
+    const tab = tabFromUrl || 'dashboard'
+    switch (tab) {
+      case 'leads':
+        return 'leads'
+      case 'materials':
+        return 'materials'
+      case 'templates':
+        return 'templates'
+      case 'analytics':
+        return 'analytics'
+      case 'settings':
+        return 'settings'
+      default:
+        return 'dashboard'
+    }
+  }
+
+  const currentView = getCurrentView()
+
   return (
     <ProtectedRoute>
-      <div className="min-h-screen bg-gray-50">
-        {/* Header */}
-        <header className="bg-white shadow">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="flex justify-between items-center py-6">
-              <h1 className="text-3xl font-bold text-gray-900">
-                AI邮件自动化助手
-              </h1>
-              <div className="flex items-center space-x-4">
-                <span className="text-sm text-gray-700">
-                  欢迎，{user?.email}
-                </span>
-                <button
-                  onClick={signOut}
-                  className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-md text-sm font-medium"
-                >
-                  退出登录
-                </button>
-              </div>
-            </div>
-          </div>
-        </header>
+      <DashboardLayout>
+        {/* 根据当前视图渲染不同内容 */}
+        {currentView === 'dashboard' && (
+          <>
+            {/* Navigation Tabs */}
+            <NavigationTabs activeTab={activeTab} onTabChange={handleTabChange} />
 
-        {/* Navigation Tabs */}
-        <NavigationTabs activeTab={activeTab} onTabChange={handleTabChange} />
-
-        {/* Main Content */}
-        <main className="max-w-7xl mx-auto py-4 sm:px-6 lg:px-8">
-          <div className="px-4 sm:px-0">
+            {/* Main Content */}
+            <div className="max-w-7xl mx-auto">
+              <div className="px-4 sm:px-0">
             {/* 统计卡片 - 压缩间距 */}
             <div className="grid grid-cols-1 md:grid-cols-5 gap-3 mb-6">
               <div className="bg-white overflow-hidden shadow rounded-lg">
@@ -347,20 +354,58 @@ export default function Dashboard() {
                 <LeadsList key={refreshKey} />
               </div>
             </div>
+              </div>
+            </div>
+
+
+
+            {/* 通知组件 */}
+            <Notification
+              type={notification.type}
+              title={notification.title}
+              message={notification.message}
+              isVisible={notification.isVisible}
+              onClose={hideNotification}
+            />
+          </>
+        )}
+
+        {/* 其他视图的占位符 */}
+        {currentView === 'leads' && (
+          <div className="text-center py-12">
+            <h2 className="text-2xl font-bold text-gray-900 mb-4">客户线索管理</h2>
+            <p className="text-gray-600">客户线索管理功能正在开发中...</p>
           </div>
-        </main>
+        )}
 
+        {currentView === 'materials' && (
+          <div className="text-center py-12">
+            <h2 className="text-2xl font-bold text-gray-900 mb-4">产品资料管理</h2>
+            <p className="text-gray-600">产品资料管理功能正在开发中...</p>
+          </div>
+        )}
 
+        {currentView === 'templates' && (
+          <div className="text-center py-12">
+            <h2 className="text-2xl font-bold text-gray-900 mb-4">邮件模板</h2>
+            <p className="text-gray-600">邮件模板功能即将推出...</p>
+          </div>
+        )}
 
-        {/* 通知组件 */}
-        <Notification
-          type={notification.type}
-          title={notification.title}
-          message={notification.message}
-          isVisible={notification.isVisible}
-          onClose={hideNotification}
-        />
-      </div>
+        {currentView === 'analytics' && (
+          <div className="text-center py-12">
+            <h2 className="text-2xl font-bold text-gray-900 mb-4">数据分析</h2>
+            <p className="text-gray-600">数据分析功能即将推出...</p>
+          </div>
+        )}
+
+        {currentView === 'settings' && (
+          <div className="text-center py-12">
+            <h2 className="text-2xl font-bold text-gray-900 mb-4">设置</h2>
+            <p className="text-gray-600">设置功能正在开发中...</p>
+          </div>
+        )}
+      </DashboardLayout>
     </ProtectedRoute>
   )
 }
