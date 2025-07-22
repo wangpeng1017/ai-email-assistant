@@ -61,13 +61,51 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   }
 
   const signInWithGoogle = async () => {
+    // 获取正确的重定向URL
+    const getRedirectUrl = () => {
+      // 优先使用环境变量中的站点URL
+      const siteUrl = process.env.NEXT_PUBLIC_SITE_URL;
+
+      if (siteUrl) {
+        console.log('🌐 使用环境变量站点URL:', siteUrl);
+        return `${siteUrl}/dashboard`;
+      }
+
+      // 如果没有环境变量，使用当前域名
+      if (typeof window !== 'undefined') {
+        const currentOrigin = window.location.origin;
+
+        // 如果是localhost，强制使用生产URL
+        if (currentOrigin.includes('localhost')) {
+          const productionUrl = 'https://ai-email-assistant-f-git-bf6853-wangpeng10170414-1653s-projects.vercel.app';
+          console.log('🔄 从localhost重定向到生产环境:', productionUrl);
+          return `${productionUrl}/dashboard`;
+        }
+
+        // 使用当前域名
+        console.log('📍 使用当前域名:', currentOrigin);
+        return `${currentOrigin}/dashboard`;
+      }
+
+      // 服务器端渲染时的默认值
+      const fallbackUrl = 'https://ai-email-assistant-f-git-bf6853-wangpeng10170414-1653s-projects.vercel.app';
+      console.log('🔧 使用默认生产URL:', fallbackUrl);
+      return `${fallbackUrl}/dashboard`;
+    };
+
+    const redirectUrl = getRedirectUrl();
+    console.log('✅ 最终OAuth重定向URL:', redirectUrl);
+
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: `${window.location.origin}/dashboard`,
+        redirectTo: redirectUrl,
       },
     })
-    if (error) throw error
+    if (error) {
+      console.error('❌ Google OAuth错误:', error);
+      throw error;
+    }
   }
 
   const value = {
