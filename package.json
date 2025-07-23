@@ -23,6 +23,7 @@
     "verify-oauth": "node scripts/verify-oauth-config.js",
     "fix-url-duplication": "node scripts/fix-url-duplication.js",
     "verify-env": "node scripts/verify-env-vars.js",
+    "verify-gmail": "node scripts/verify-gmail-config.js",
     "type-check": "tsc --noEmit"
   },
   "dependencies": {
