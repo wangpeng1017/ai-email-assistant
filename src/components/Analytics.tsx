@@ -5,6 +5,28 @@ import { useAuth } from '@/contexts/AuthContext'
 import { useNotification } from '@/components/Notification'
 import { supabase } from '@/lib/supabase'
 
+interface Lead {
+  id: string
+  user_id: string
+  customer_name: string
+  company_name?: string
+  email?: string
+  phone?: string
+  website?: string
+  source: string
+  status: string
+  notes?: string
+  industry?: string
+  company_size?: string
+  generated_email_subject?: string
+  generated_email_body?: string
+  gmail_draft_id?: string
+  gmail_message_id?: string
+  sent_at?: string
+  created_at: string
+  updated_at?: string
+}
+
 interface AnalyticsData {
   totalLeads: number
   leadsThisMonth: number
@@ -77,7 +99,9 @@ export default function Analytics() {
       }
 
       // 获取客户线索统计 - 带回退机制
-      let allLeads, leadsError
+      let allLeads: Lead[] | null = null
+      let leadsError: Error | null = null
+
       try {
         const result = await supabase
           .from('customer_leads')
@@ -85,13 +109,13 @@ export default function Analytics() {
           .eq('user_id', user.id)
 
         allLeads = result.data
-        leadsError = result.error
+        leadsError = result.error as Error | null
       } catch (e) {
-        leadsError = e
+        leadsError = e as Error
       }
 
       // 如果customer_leads表不存在，回退到leads表
-      if (leadsError && leadsError.message.includes('relation "public.customer_leads" does not exist')) {
+      if (leadsError && 'message' in leadsError && leadsError.message.includes('relation "public.customer_leads" does not exist')) {
         console.log('customer_leads表不存在，回退到leads表')
         const { data: leadsData, error: fallbackError } = await supabase
           .from('leads')

@@ -54,17 +54,19 @@ export default function LeadsManagement() {
         query = query.eq('source', sourceFilter)
       }
 
-      let data, error
+      let data: Lead[] | null = null
+      let error: Error | null = null
+
       try {
         const result = await query
         data = result.data
-        error = result.error
+        error = result.error as Error | null
       } catch (e) {
-        error = e
+        error = e as Error
       }
 
       // 如果customer_leads表不存在，回退到leads表
-      if (error && error.message.includes('relation "public.customer_leads" does not exist')) {
+      if (error && 'message' in error && error.message.includes('relation "public.customer_leads" does not exist')) {
         console.log('customer_leads表不存在，回退到leads表')
         let leadsQuery = supabase
           .from('leads')
@@ -90,24 +92,16 @@ export default function LeadsManagement() {
         // 映射leads表数据到新格式
         data = leadsData?.map(lead => ({
           id: lead.id,
-          user_id: lead.user_id,
           customer_name: lead.customer_name || 'Unknown',
-          company_name: lead.customer_website || '',
-          email: lead.customer_email || '',
-          phone: lead.phone || '',
-          website: lead.customer_website || '',
+          customer_email: lead.customer_email || '',
+          customer_website: lead.customer_website || '',
           source: mapOldSourceToNew(lead.source),
           status: mapOldStatusToNew(lead.status),
-          notes: lead.notes || '',
-          industry: '',
-          company_size: '',
-          generated_email_subject: lead.generated_mail_subject || '',
-          generated_email_body: lead.generated_mail_body || '',
-          gmail_draft_id: lead.gmail_draft_id || '',
-          gmail_message_id: lead.gmail_message_id || '',
-          sent_at: lead.sent_at,
           created_at: lead.created_at,
-          updated_at: lead.updated_at || lead.created_at
+          updated_at: lead.updated_at || lead.created_at,
+          notes: lead.notes || '',
+          last_contact: lead.last_contact,
+          next_follow_up: lead.next_follow_up
         })) || []
       } else if (error) {
         throw error
@@ -209,7 +203,8 @@ export default function LeadsManagement() {
 
     try {
       // 首先尝试从customer_leads表删除
-      let deleteError
+      let deleteError: Error | null = null
+
       try {
         const result = await supabase
           .from('customer_leads')
@@ -217,13 +212,13 @@ export default function LeadsManagement() {
           .eq('id', leadId)
           .eq('user_id', user?.id)
 
-        deleteError = result.error
+        deleteError = result.error as Error | null
       } catch (e) {
-        deleteError = e
+        deleteError = e as Error
       }
 
       // 如果customer_leads表不存在，回退到leads表
-      if (deleteError && deleteError.message.includes('relation "public.customer_leads" does not exist')) {
+      if (deleteError && 'message' in deleteError && deleteError.message.includes('relation "public.customer_leads" does not exist')) {
         console.log('customer_leads表不存在，回退到leads表')
         const { error: leadsError } = await supabase
           .from('leads')

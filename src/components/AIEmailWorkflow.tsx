@@ -43,7 +43,9 @@ export default function AIEmailWorkflow() {
 
     try {
       // 首先尝试从customer_leads表获取数据
-      let data, error
+      let data: Lead[] | null = null
+      let error: Error | null = null
+
       try {
         const result = await supabase
           .from('customer_leads')
@@ -52,13 +54,13 @@ export default function AIEmailWorkflow() {
           .order('created_at', { ascending: false })
 
         data = result.data
-        error = result.error
+        error = result.error as Error | null
       } catch (e) {
-        error = e
+        error = e as Error
       }
 
       // 如果customer_leads表不存在，回退到leads表
-      if (error && error.message.includes('relation "public.customer_leads" does not exist')) {
+      if (error && 'message' in error && error.message.includes('relation "public.customer_leads" does not exist')) {
         console.log('customer_leads表不存在，回退到leads表')
         const { data: leadsData, error: leadsError } = await supabase
           .from('leads')
