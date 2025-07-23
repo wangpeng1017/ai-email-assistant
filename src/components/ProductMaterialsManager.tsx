@@ -32,14 +32,14 @@ export default function ProductMaterialsManager() {
     if (!user) return
 
     try {
-      const { data, error } = await supabase
-        .from('product_materials')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false })
+      const response = await fetch(`/api/materials/upload?userId=${user.id}`)
+      const result = await response.json()
 
-      if (error) throw error
-      setMaterials(data || [])
+      if (!response.ok || !result.success) {
+        throw new Error(result.error || '获取材料列表失败')
+      }
+
+      setMaterials(result.data || [])
     } catch (error) {
       console.error('获取产品资料失败:', error)
       showNotification('error', '加载失败', '无法获取产品资料列表')
@@ -82,16 +82,23 @@ export default function ProductMaterialsManager() {
         const result = await response.json()
 
         if (!response.ok || !result.success) {
+          console.error('上传失败:', result.error, 'Response:', result)
           showNotification('error', '上传失败', result.error || `${file.name} 上传失败`)
           continue
         }
 
+        console.log('文件上传成功:', result.data)
         uploadResults.push(result.data)
       }
 
       if (uploadResults.length > 0) {
         showNotification('success', '上传成功', `成功上传 ${uploadResults.length} 个文件`)
-        fetchMaterials() // 刷新列表
+        // 延迟刷新列表，确保数据库操作完成
+        setTimeout(() => {
+          fetchMaterials()
+        }, 500)
+      } else if (files.length > 0) {
+        showNotification('warning', '上传完成', '没有文件成功上传，请检查文件格式和大小')
       }
     } catch (error) {
       console.error('上传过程出错:', error)
@@ -135,24 +142,25 @@ export default function ProductMaterialsManager() {
   // 下载文件
   const handleDownload = async (material: ProductMaterial) => {
     try {
-      const { data, error } = await supabase.storage
-        .from('product-materials')
-        .download(material.storage_path)
+      console.log('开始下载文件:', material.file_name, 'ID:', material.id)
 
-      if (error) throw error
+      // 使用API端点下载文件
+      const downloadUrl = `/api/materials/download?id=${material.id}&userId=${user?.id}`
 
       // 创建下载链接
-      const url = URL.createObjectURL(data)
       const a = document.createElement('a')
-      a.href = url
+      a.href = downloadUrl
       a.download = material.file_name
+      a.target = '_blank'
       document.body.appendChild(a)
       a.click()
       document.body.removeChild(a)
-      URL.revokeObjectURL(url)
+
+      console.log('文件下载请求已发送:', material.file_name)
+      showNotification('success', '下载开始', '文件下载已开始')
     } catch (error) {
       console.error('下载失败:', error)
-      showNotification('error', '下载失败', '无法下载文件')
+      showNotification('error', '下载失败', `无法下载文件: ${error instanceof Error ? error.message : '未知错误'}`)
     }
   }
 

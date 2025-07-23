@@ -8,12 +8,22 @@ const supabase = createClient(
 
 export async function POST(request: NextRequest) {
   try {
+    console.log('收到文件上传请求')
     const formData = await request.formData()
     const file = formData.get('file') as File
     const userId = formData.get('userId') as string
     const description = formData.get('description') as string || ''
 
+    console.log('上传参数:', {
+      fileName: file?.name,
+      fileSize: file?.size,
+      fileType: file?.type,
+      userId: userId,
+      description: description
+    })
+
     if (!file || !userId) {
+      console.error('缺少必要参数:', { file: !!file, userId: !!userId })
       return NextResponse.json(
         { success: false, error: '缺少必要参数' },
         { status: 400 }
@@ -54,6 +64,7 @@ export async function POST(request: NextRequest) {
     const filePath = `${userId}/materials/${fileName}`
 
     // 上传到Supabase Storage
+    console.log('开始上传文件到Storage:', filePath)
     const { error: uploadError } = await supabase.storage
       .from('product-materials')
       .upload(filePath, file)
@@ -61,22 +72,28 @@ export async function POST(request: NextRequest) {
     if (uploadError) {
       console.error('文件上传失败:', uploadError)
       return NextResponse.json(
-        { success: false, error: '文件上传失败' },
+        { success: false, error: `文件上传失败: ${uploadError.message}` },
         { status: 500 }
       )
     }
 
+    console.log('文件上传到Storage成功')
+
     // 保存文件信息到数据库
+    console.log('开始保存文件信息到数据库')
+    const insertData = {
+      user_id: userId,
+      file_name: file.name,
+      storage_path: filePath,
+      file_type: file.type,
+      file_size: file.size,
+      description: description || null
+    }
+    console.log('插入数据:', insertData)
+
     const { data, error: dbError } = await supabase
       .from('product_materials')
-      .insert({
-        user_id: userId,
-        file_name: file.name,
-        storage_path: filePath,
-        file_type: file.type,
-        file_size: file.size,
-        description: description || null
-      })
+      .insert(insertData)
       .select()
       .single()
 
@@ -85,10 +102,12 @@ export async function POST(request: NextRequest) {
       // 删除已上传的文件
       await supabase.storage.from('product-materials').remove([filePath])
       return NextResponse.json(
-        { success: false, error: '文件信息保存失败' },
+        { success: false, error: `文件信息保存失败: ${dbError.message}` },
         { status: 500 }
       )
     }
+
+    console.log('文件信息保存成功:', data)
 
     return NextResponse.json({
       success: true,
