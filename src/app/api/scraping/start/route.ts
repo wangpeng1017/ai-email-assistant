@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import * as cheerio from 'cheerio'
 
+// 定义Cheerio相关类型 - 避免泛型问题
+type CheerioAPI = ReturnType<typeof cheerio.load>
+type CheerioElement = ReturnType<CheerioAPI>
+
 interface ScrapedLead {
   company_name: string
   website_url: string
@@ -127,7 +131,7 @@ export async function POST(request: NextRequest) {
 }
 
 // 提取公司信息的函数
-function extractCompanyInfo($: cheerio.CheerioAPI, baseUrl: string): ScrapedLead[] {
+function extractCompanyInfo($: CheerioAPI, baseUrl: string): ScrapedLead[] {
   const leads: ScrapedLead[] = []
   const companyPatterns = [
     // 常见的公司列表选择器
@@ -163,7 +167,7 @@ function extractCompanyInfo($: cheerio.CheerioAPI, baseUrl: string): ScrapedLead
 }
 
 // 从元素中提取线索信息
-function extractLeadFromElement($element: any, $: cheerio.CheerioAPI, baseUrl: string): ScrapedLead | null {
+function extractLeadFromElement($element: CheerioElement, $: CheerioAPI, baseUrl: string): ScrapedLead | null {
   // 提取公司名称
   const nameSelectors = ['h1', 'h2', 'h3', '.name', '.title', '.company-name', '[class*="name"]']
   let companyName = ''
@@ -222,7 +226,7 @@ function extractLeadFromElement($element: any, $: cheerio.CheerioAPI, baseUrl: s
 }
 
 // 通用公司信息提取
-function extractGenericCompanyInfo($: cheerio.CheerioAPI, baseUrl: string): ScrapedLead[] {
+function extractGenericCompanyInfo($: CheerioAPI, baseUrl: string): ScrapedLead[] {
   const leads: ScrapedLead[] = []
   const emailRegex = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g
   

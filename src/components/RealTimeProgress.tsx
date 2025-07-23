@@ -333,7 +333,7 @@ export default function RealTimeProgress({
         <div className="p-6 max-h-60 overflow-y-auto">
           <h4 className="text-sm font-medium text-gray-700 mb-4">处理步骤</h4>
           <div className="space-y-3">
-            {progress.steps.map((step, _index) => (
+            {progress.steps.map((step) => (
               <div key={step.id} className="flex items-center space-x-3">
                 <div className="flex-shrink-0">
                   {getStepIcon(step.status)}
