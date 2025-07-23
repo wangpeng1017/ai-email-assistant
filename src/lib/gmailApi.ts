@@ -91,7 +91,7 @@ export async function createEmailDraft(
 function createEmailMessage(draft: EmailDraft): string {
   const boundary = 'boundary_' + Math.random().toString(36).substr(2, 9)
   
-  let message = [
+  const message = [
     `To: ${draft.to}`,
     `Subject: ${draft.subject}`,
     'MIME-Version: 1.0',

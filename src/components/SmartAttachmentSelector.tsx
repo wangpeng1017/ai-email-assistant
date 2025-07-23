@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 
 interface ProductMaterial {
@@ -43,7 +43,7 @@ export default function SmartAttachmentSelector({
   onAttachmentsSelected,
   className = ''
 }: SmartAttachmentSelectorProps) {
-  const { user } = useAuth()
+  const { user, session } = useAuth()
   const [recommendation, setRecommendation] = useState<AttachmentRecommendation | null>(null)
   const [selectedAttachments, setSelectedAttachments] = useState<Set<string>>(new Set())
   const [loading, setLoading] = useState(false)
@@ -51,8 +51,8 @@ export default function SmartAttachmentSelector({
   const [showAll, setShowAll] = useState(false)
 
   // 获取智能推荐
-  const fetchRecommendations = async () => {
-    if (!user || !emailContent.subject || !emailContent.body) return
+  const fetchRecommendations = useCallback(async () => {
+    if (!user || !session || !emailContent.subject || !emailContent.body) return
 
     setLoading(true)
     setError(null)
@@ -61,7 +61,7 @@ export default function SmartAttachmentSelector({
       const response = await fetch('/api/attachments/match', {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${user.access_token}`,
+          'Authorization': `Bearer ${session.access_token}`,
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
@@ -90,7 +90,7 @@ export default function SmartAttachmentSelector({
     } finally {
       setLoading(false)
     }
-  }
+  }, [user, session, emailContent.subject, emailContent.body, emailContent, leadId])
 
   // 切换附件选择
   const toggleAttachment = (materialId: string) => {
@@ -104,13 +104,13 @@ export default function SmartAttachmentSelector({
   }
 
   // 获取选中的附件
-  const getSelectedMaterials = (): ProductMaterial[] => {
+  const getSelectedMaterials = useCallback((): ProductMaterial[] => {
     if (!recommendation) return []
-    
+
     return recommendation.matches
       .filter(match => selectedAttachments.has(match.material.id))
       .map(match => match.material)
-  }
+  }, [recommendation, selectedAttachments])
 
   // 获取置信度颜色
   const getConfidenceColor = (confidence: string) => {
@@ -144,11 +144,11 @@ export default function SmartAttachmentSelector({
 
   useEffect(() => {
     fetchRecommendations()
-  }, [emailContent, leadId, user])
+  }, [fetchRecommendations])
 
   useEffect(() => {
     onAttachmentsSelected(getSelectedMaterials())
-  }, [selectedAttachments, recommendation])
+  }, [selectedAttachments, recommendation, onAttachmentsSelected, getSelectedMaterials])
 
   const displayedMatches = showAll ? recommendation?.matches || [] : (recommendation?.matches || []).slice(0, 5)
 

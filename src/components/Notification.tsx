@@ -142,6 +142,7 @@ export function useNotification() {
 
   return {
     notification,
+    showNotification,
     showSuccess,
     showError,
     showWarning,

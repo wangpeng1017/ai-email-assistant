@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 
 interface ProgressStep {
@@ -23,9 +23,16 @@ interface BatchProgress {
   estimatedEndTime?: number
 }
 
+interface BatchResults {
+  completedItems: number
+  failedItems: number
+  totalItems: number
+  results?: unknown[]
+}
+
 interface RealTimeProgressProps {
   batchId?: string
-  onComplete?: (results: any) => void
+  onComplete?: (results: BatchResults) => void
   onError?: (error: string) => void
   className?: string
 }
@@ -36,7 +43,7 @@ export default function RealTimeProgress({
   onError,
   className = ''
 }: RealTimeProgressProps) {
-  const { user } = useAuth()
+  const { user, session } = useAuth()
   const [progress, setProgress] = useState<BatchProgress | null>(null)
   const [isVisible, setIsVisible] = useState(false)
   const [logs, setLogs] = useState<string[]>([])
@@ -54,8 +61,28 @@ export default function RealTimeProgress({
     { id: 'complete', name: '完成处理', status: 'pending' }
   ]
 
+  // 获取进度信息
+  const fetchProgress = useCallback(async () => {
+    if (!user || !session || !batchId) return
+
+    try {
+      const response = await fetch(`/api/automation/progress?batchId=${batchId}`, {
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`
+        }
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        updateProgress(data)
+      }
+    } catch (error) {
+      console.error('Error fetching progress:', error)
+    }
+  }, [user, session, batchId])
+
   // 启动进度监控
-  const startProgressMonitoring = (totalItems: number = 1) => {
+  const startProgressMonitoring = useCallback((totalItems: number = 1) => {
     const now = Date.now()
     setProgress({
       totalItems,
@@ -71,56 +98,41 @@ export default function RealTimeProgress({
     if (intervalRef.current) {
       clearInterval(intervalRef.current)
     }
-    
+
     intervalRef.current = setInterval(() => {
       fetchProgress()
     }, 1000)
-  }
+  }, [fetchProgress])
 
-  // 获取进度信息
-  const fetchProgress = async () => {
-    if (!user || !batchId) return
 
-    try {
-      const response = await fetch(`/api/automation/progress?batchId=${batchId}`, {
-        headers: {
-          'Authorization': `Bearer ${user.access_token}`
-        }
-      })
-
-      if (response.ok) {
-        const data = await response.json()
-        updateProgress(data)
-      }
-    } catch (error) {
-      console.error('Error fetching progress:', error)
-    }
-  }
 
   // 更新进度信息
-  const updateProgress = (data: any) => {
+  const updateProgress = (data: Record<string, unknown>) => {
     setProgress(prev => {
       if (!prev) return null
+
+      const completedSteps = Array.isArray(data.completedSteps) ? data.completedSteps : []
+      const failedSteps = Array.isArray(data.failedSteps) ? data.failedSteps : []
 
       const updatedSteps = prev.steps.map(step => {
         if (data.currentStep === step.id) {
           return {
             ...step,
             status: 'running' as const,
-            message: data.message,
-            progress: data.stepProgress
+            message: typeof data.message === 'string' ? data.message : undefined,
+            progress: typeof data.stepProgress === 'number' ? data.stepProgress : undefined
           }
-        } else if (data.completedSteps?.includes(step.id)) {
+        } else if (completedSteps.includes(step.id)) {
           return {
             ...step,
             status: 'completed' as const,
             endTime: Date.now()
           }
-        } else if (data.failedSteps?.includes(step.id)) {
+        } else if (failedSteps.includes(step.id)) {
           return {
             ...step,
             status: 'failed' as const,
-            message: data.error,
+            message: typeof data.error === 'string' ? data.error : undefined,
             endTime: Date.now()
           }
         }
@@ -129,15 +141,15 @@ export default function RealTimeProgress({
 
       const newProgress = {
         ...prev,
-        completedItems: data.completedItems || prev.completedItems,
-        failedItems: data.failedItems || prev.failedItems,
-        currentItem: data.currentItem,
+        completedItems: typeof data.completedItems === 'number' ? data.completedItems : prev.completedItems,
+        failedItems: typeof data.failedItems === 'number' ? data.failedItems : prev.failedItems,
+        currentItem: typeof data.currentItem === 'string' ? data.currentItem : undefined,
         steps: updatedSteps,
-        estimatedEndTime: data.estimatedEndTime
+        estimatedEndTime: typeof data.estimatedEndTime === 'number' ? data.estimatedEndTime : undefined
       }
 
       // 添加日志
-      if (data.message) {
+      if (typeof data.message === 'string') {
         setLogs(prevLogs => [
           ...prevLogs,
           `${new Date().toLocaleTimeString()} - ${data.message}`
@@ -146,9 +158,15 @@ export default function RealTimeProgress({
 
       // 检查是否完成
       if (data.status === 'completed') {
-        handleComplete(data.results)
+        const results: BatchResults = {
+          completedItems: typeof data.completedItems === 'number' ? data.completedItems : 0,
+          failedItems: typeof data.failedItems === 'number' ? data.failedItems : 0,
+          totalItems: typeof data.totalItems === 'number' ? data.totalItems : 0,
+          results: Array.isArray(data.results) ? data.results : []
+        }
+        handleComplete(results)
       } else if (data.status === 'failed') {
-        handleError(data.error)
+        handleError(typeof data.error === 'string' ? data.error : 'Unknown error')
       }
 
       return newProgress
@@ -156,7 +174,7 @@ export default function RealTimeProgress({
   }
 
   // 处理完成
-  const handleComplete = (results: any) => {
+  const handleComplete = (results: BatchResults) => {
     if (intervalRef.current) {
       clearInterval(intervalRef.current)
       intervalRef.current = null
@@ -260,7 +278,7 @@ export default function RealTimeProgress({
     if (batchId) {
       startProgressMonitoring()
     }
-  }, [batchId])
+  }, [batchId, startProgressMonitoring])
 
   if (!isVisible || !progress) {
     return null

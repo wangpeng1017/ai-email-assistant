@@ -9,6 +9,7 @@ interface LeadData {
   customer_name: string
   customer_email: string
   customer_website: string
+  source: string
 }
 
 interface ExcelUploadFormProps {
@@ -28,7 +29,7 @@ export default function ExcelUploadForm({
   const { showNotification } = useNotification()
 
   // 验证Excel数据格式
-  const validateLeadData = (data: any[]): LeadData[] => {
+  const validateLeadData = (data: Record<string, unknown>[]): LeadData[] => {
     const validLeads: LeadData[] = []
     const errors: string[] = []
 
@@ -54,13 +55,18 @@ export default function ExcelUploadForm({
       // 邮箱格式验证
       const email = row.customer_email || row['邮箱'] || row['电子邮箱']
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-      if (!emailRegex.test(email)) {
+      if (!email || typeof email !== 'string' || !emailRegex.test(email)) {
         errors.push(`第${rowNum}行：邮箱格式不正确`)
         return
       }
 
       // 网站URL格式验证
       const website = row.customer_website || row['网站'] || row['官网']
+      if (!website || typeof website !== 'string') {
+        errors.push(`第${rowNum}行：网站地址不能为空`)
+        return
+      }
+
       let formattedWebsite = website.trim()
       if (!formattedWebsite.startsWith('http://') && !formattedWebsite.startsWith('https://')) {
         formattedWebsite = 'https://' + formattedWebsite
@@ -73,16 +79,24 @@ export default function ExcelUploadForm({
         return
       }
 
+      // 客户名称验证
+      const customerName = row.customer_name || row['客户名称'] || row['公司名称']
+      if (!customerName || typeof customerName !== 'string') {
+        errors.push(`第${rowNum}行：客户名称不能为空`)
+        return
+      }
+
       // 添加有效数据
       validLeads.push({
-        customer_name: (row.customer_name || row['客户名称'] || row['公司名称']).trim(),
+        customer_name: customerName.trim(),
         customer_email: email.trim().toLowerCase(),
-        customer_website: formattedWebsite
+        customer_website: formattedWebsite,
+        source: 'excel_import'
       })
     })
 
     if (errors.length > 0) {
-      showNotification(`数据验证发现 ${errors.length} 个错误：\n${errors.slice(0, 5).join('\n')}${errors.length > 5 ? '\n...' : ''}`, 'error')
+      showNotification('error', '数据验证错误', `发现 ${errors.length} 个错误：\n${errors.slice(0, 5).join('\n')}${errors.length > 5 ? '\n...' : ''}`)
     }
 
     return validLeads
@@ -115,11 +129,11 @@ export default function ExcelUploadForm({
 
         // 获取标题行和数据行
         const headers = jsonData[0] as string[]
-        const rows = jsonData.slice(1) as any[][]
+        const rows = jsonData.slice(1) as unknown[][]
 
         // 转换为对象数组
         const objectData = rows.map(row => {
-          const obj: any = {}
+          const obj: Record<string, unknown> = {}
           headers.forEach((header, index) => {
             obj[header] = row[index] || ''
           })
@@ -143,15 +157,17 @@ export default function ExcelUploadForm({
         onDataParsed(validLeads)
         
         showNotification(
-          `成功解析 ${validLeads.length} 条客户数据${objectData.length > validLeads.length ? `（跳过 ${objectData.length - validLeads.length} 条无效数据）` : ''}`, 
-          'success'
+          'success',
+          '解析成功',
+          `成功解析 ${validLeads.length} 条客户数据${objectData.length > validLeads.length ? `（跳过 ${objectData.length - validLeads.length} 条无效数据）` : ''}`
         )
 
       } catch (error) {
         console.error('Excel解析错误:', error)
         showNotification(
-          `Excel文件解析失败: ${error instanceof Error ? error.message : '未知错误'}`, 
-          'error'
+          'error',
+          '解析失败',
+          `Excel文件解析失败: ${error instanceof Error ? error.message : '未知错误'}`
         )
       } finally {
         setIsProcessing(false)
@@ -162,7 +178,7 @@ export default function ExcelUploadForm({
     reader.onerror = () => {
       setIsProcessing(false)
       onUploadComplete()
-      showNotification('文件读取失败，请重试', 'error')
+      showNotification('error', '读取失败', '文件读取失败，请重试')
     }
 
     reader.readAsArrayBuffer(file)
@@ -181,13 +197,13 @@ export default function ExcelUploadForm({
     ]
 
     if (!allowedTypes.includes(file.type) && !file.name.match(/\.(xlsx|xls|csv)$/i)) {
-      showNotification('请上传Excel文件（.xlsx, .xls）或CSV文件', 'error')
+      showNotification('error', '文件格式错误', '请上传Excel文件（.xlsx, .xls）或CSV文件')
       return
     }
 
     // 检查文件大小（限制10MB）
     if (file.size > 10 * 1024 * 1024) {
-      showNotification('文件大小不能超过10MB', 'error')
+      showNotification('error', '文件过大', '文件大小不能超过10MB')
       return
     }
 

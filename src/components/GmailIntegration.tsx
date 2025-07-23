@@ -15,19 +15,19 @@ interface GmailIntegrationProps {
 }
 
 export default function GmailIntegration({ onAuthComplete, className = '' }: GmailIntegrationProps) {
-  const { user } = useAuth()
+  const { user, session } = useAuth()
   const [authStatus, setAuthStatus] = useState<GmailAuthStatus | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   // 检查Gmail认证状态
   const checkAuthStatus = async () => {
-    if (!user) return
+    if (!user || !session) return
 
     try {
       const response = await fetch('/api/gmail/auth-status', {
         headers: {
-          'Authorization': `Bearer ${user.access_token}`
+          'Authorization': `Bearer ${session.access_token}`
         }
       })
 
@@ -120,7 +120,7 @@ export default function GmailIntegration({ onAuthComplete, className = '' }: Gma
 
   // 撤销Gmail授权
   const revokeGmailAuth = async () => {
-    if (!user) return
+    if (!user || !session) return
 
     setLoading(true)
     setError(null)
@@ -129,7 +129,7 @@ export default function GmailIntegration({ onAuthComplete, className = '' }: Gma
       const response = await fetch('/api/gmail/revoke', {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${user.access_token}`,
+          'Authorization': `Bearer ${session.access_token}`,
           'Content-Type': 'application/json'
         }
       })

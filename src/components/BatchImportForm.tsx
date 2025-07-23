@@ -37,12 +37,12 @@ export default function BatchImportForm({ onClose, onSubmit }: BatchImportFormPr
 
   const handleSubmitBatch = async () => {
     if (parsedLeads.length === 0) {
-      showNotification('请先上传并解析Excel文件', 'error')
+      showNotification('error', '错误', '请先上传并解析Excel文件')
       return
     }
 
     if (!user) {
-      showNotification('请先登录', 'error')
+      showNotification('error', '错误', '请先登录')
       return
     }
 
@@ -72,8 +72,9 @@ export default function BatchImportForm({ onClose, onSubmit }: BatchImportFormPr
       const result = await response.json()
 
       showNotification(
-        `成功导入 ${result.imported} 条线索${result.skipped > 0 ? `，跳过 ${result.skipped} 条重复数据` : ''}`,
-        'success'
+        'success',
+        '导入成功',
+        `成功导入 ${result.imported} 条线索${result.skipped > 0 ? `，跳过 ${result.skipped} 条重复数据` : ''}`
       )
 
       onSubmit()
@@ -82,8 +83,9 @@ export default function BatchImportForm({ onClose, onSubmit }: BatchImportFormPr
     } catch (error) {
       console.error('批量导入错误:', error)
       showNotification(
-        `批量导入失败: ${error instanceof Error ? error.message : '未知错误'}`,
-        'error'
+        'error',
+        '导入失败',
+        `批量导入失败: ${error instanceof Error ? error.message : '未知错误'}`
       )
     } finally {
       setIsSubmitting(false)

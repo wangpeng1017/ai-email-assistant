@@ -26,12 +26,12 @@ interface EmailPreviewEditorProps {
 export default function EmailPreviewEditor({
   initialContent,
   attachments,
-  leadId,
+  leadId: _leadId,
   onSave,
   onSendDraft,
   className = ''
 }: EmailPreviewEditorProps) {
-  const { user } = useAuth()
+  const { user: _user } = useAuth()
   const [content, setContent] = useState(initialContent)
   const [isEditing, setIsEditing] = useState(false)
   const [loading, setLoading] = useState(false)
@@ -95,14 +95,14 @@ export default function EmailPreviewEditor({
     setSuccess(null)
   }
 
-  // 获取文件大小显示
-  const formatFileSize = (bytes: number) => {
-    if (bytes === 0) return '0 B'
-    const k = 1024
-    const sizes = ['B', 'KB', 'MB', 'GB']
-    const i = Math.floor(Math.log(bytes) / Math.log(k))
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
-  }
+  // 获取文件大小显示 (暂未使用，保留以备将来使用)
+  // const formatFileSize = (bytes: number) => {
+  //   if (bytes === 0) return '0 B'
+  //   const k = 1024
+  //   const sizes = ['B', 'KB', 'MB', 'GB']
+  //   const i = Math.floor(Math.log(bytes) / Math.log(k))
+  //   return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
+  // }
 
   // 获取文件类型图标
   const getFileTypeIcon = (fileType: string) => {

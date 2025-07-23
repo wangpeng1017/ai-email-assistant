@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import SmartAttachmentSelector from './SmartAttachmentSelector'
 import EmailPreviewEditor from './EmailPreviewEditor'
@@ -24,14 +24,20 @@ interface ProductMaterial {
   storage_path: string
 }
 
+interface GmailDraftResult {
+  draftId: string
+  messageId: string
+  threadId: string
+}
+
 interface EmailWorkflowProps {
   lead: Lead
-  onComplete?: (result: any) => void
+  onComplete?: (result: GmailDraftResult) => void
   className?: string
 }
 
 export default function EmailWorkflow({ lead, onComplete, className = '' }: EmailWorkflowProps) {
-  const { user } = useAuth()
+  const { user, session } = useAuth()
   const [currentStep, setCurrentStep] = useState<'generate' | 'attachments' | 'preview' | 'gmail'>('generate')
   const [emailContent, setEmailContent] = useState<{
     to: string
@@ -48,8 +54,8 @@ export default function EmailWorkflow({ lead, onComplete, className = '' }: Emai
   const [batchId, setBatchId] = useState<string | null>(null)
 
   // 生成邮件内容
-  const generateEmailContent = async () => {
-    if (!user) return
+  const generateEmailContent = useCallback(async () => {
+    if (!user || !session) return
 
     setLoading(true)
     setError(null)
@@ -58,7 +64,7 @@ export default function EmailWorkflow({ lead, onComplete, className = '' }: Emai
       const response = await fetch('/api/automation/start', {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${user.access_token}`,
+          'Authorization': `Bearer ${session.access_token}`,
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
@@ -84,27 +90,27 @@ export default function EmailWorkflow({ lead, onComplete, className = '' }: Emai
     } finally {
       setLoading(false)
     }
-  }
+  }, [user, session, lead.id, lead.customer_email])
 
   // 处理附件选择完成
-  const handleAttachmentsSelected = (attachments: ProductMaterial[]) => {
+  const handleAttachmentsSelected = useCallback((attachments: ProductMaterial[]) => {
     setSelectedAttachments(attachments)
-  }
+  }, [])
 
   // 进入预览步骤
-  const proceedToPreview = () => {
+  const proceedToPreview = useCallback(() => {
     setCurrentStep('preview')
-  }
+  }, [])
 
   // 保存邮件内容
-  const handleSaveEmail = async (content: { subject: string; body: string }) => {
-    if (!user) return
+  const handleSaveEmail = useCallback(async (content: { subject: string; body: string }) => {
+    if (!user || !session) return
 
     try {
       const response = await fetch(`/api/leads/${lead.id}`, {
         method: 'PATCH',
         headers: {
-          'Authorization': `Bearer ${user.access_token}`,
+          'Authorization': `Bearer ${session.access_token}`,
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
@@ -122,16 +128,16 @@ export default function EmailWorkflow({ lead, onComplete, className = '' }: Emai
     } catch (error) {
       throw error
     }
-  }
+  }, [user, session, lead.id])
 
   // 创建Gmail草稿
-  const handleCreateGmailDraft = async (content: {
+  const handleCreateGmailDraft = useCallback(async (content: {
     to: string
     subject: string
     body: string
     attachments: ProductMaterial[]
   }) => {
-    if (!user || !gmailTokens) {
+    if (!user || !session || !gmailTokens) {
       setError('请先连接Gmail账户')
       return
     }
@@ -143,7 +149,7 @@ export default function EmailWorkflow({ lead, onComplete, className = '' }: Emai
       const response = await fetch('/api/gmail/create-draft', {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${user.access_token}`,
+          'Authorization': `Bearer ${session.access_token}`,
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
@@ -177,12 +183,12 @@ export default function EmailWorkflow({ lead, onComplete, className = '' }: Emai
     } finally {
       setLoading(false)
     }
-  }
+  }, [user, session, gmailTokens, lead.id, onComplete])
 
   // Gmail认证完成
-  const handleGmailAuthComplete = (tokens: { accessToken: string; refreshToken?: string }) => {
+  const handleGmailAuthComplete = useCallback((tokens: { accessToken: string; refreshToken?: string }) => {
     setGmailTokens(tokens)
-  }
+  }, [])
 
   // 获取步骤标题
   const getStepTitle = () => {
@@ -216,7 +222,7 @@ export default function EmailWorkflow({ lead, onComplete, className = '' }: Emai
       })
       setCurrentStep('attachments')
     }
-  }, [lead])
+  }, [lead.generated_mail_subject, lead.generated_mail_body, lead.customer_email])
 
   return (
     <div className={`space-y-6 ${className}`}>
@@ -391,7 +397,14 @@ export default function EmailWorkflow({ lead, onComplete, className = '' }: Emai
           batchId={batchId}
           onComplete={(results) => {
             setBatchId(null)
-            if (onComplete) onComplete(results)
+            // 转换BatchResults为GmailDraftResult格式
+            if (onComplete && results.results && results.results.length > 0) {
+              onComplete({
+                draftId: 'batch-completed',
+                messageId: 'batch-completed',
+                threadId: 'batch-completed'
+              })
+            }
           }}
           onError={(error) => {
             setBatchId(null)

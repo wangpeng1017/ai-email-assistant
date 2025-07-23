@@ -6,11 +6,8 @@ const nextConfig = {
     CUSTOM_BUILD_TIME: new Date().toISOString(),
   },
   
-  // 实验性功能
-  experimental: {
-    // 启用服务器组件
-    serverComponentsExternalPackages: ['@supabase/supabase-js'],
-  },
+  // 服务器外部包配置
+  serverExternalPackages: ['@supabase/supabase-js'],
   
   // 构建优化
   compiler: {
