@@ -42,19 +42,79 @@ export default function AIEmailWorkflow() {
     if (!user) return
 
     try {
-      const { data, error } = await supabase
-        .from('customer_leads')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false })
+      // 首先尝试从customer_leads表获取数据
+      let data, error
+      try {
+        const result = await supabase
+          .from('customer_leads')
+          .select('*')
+          .eq('user_id', user.id)
+          .order('created_at', { ascending: false })
 
-      if (error) throw error
+        data = result.data
+        error = result.error
+      } catch (e) {
+        error = e
+      }
+
+      // 如果customer_leads表不存在，回退到leads表
+      if (error && error.message.includes('relation "public.customer_leads" does not exist')) {
+        console.log('customer_leads表不存在，回退到leads表')
+        const { data: leadsData, error: leadsError } = await supabase
+          .from('leads')
+          .select('*')
+          .eq('user_id', user.id)
+          .order('created_at', { ascending: false })
+
+        if (leadsError) throw leadsError
+
+        // 映射leads表数据到新格式
+        data = leadsData?.map(lead => ({
+          id: lead.id,
+          user_id: lead.user_id,
+          customer_name: lead.customer_name || 'Unknown',
+          company_name: lead.customer_website || '',
+          email: lead.customer_email || '',
+          phone: lead.phone || '',
+          website: lead.customer_website || '',
+          source: mapOldSourceToNew(lead.source),
+          status: mapOldStatusToNew(lead.status),
+          notes: lead.notes || '',
+          industry: '',
+          company_size: '',
+          created_at: lead.created_at,
+          updated_at: lead.updated_at || lead.created_at
+        })) || []
+      } else if (error) {
+        throw error
+      }
+
       setLeads(data || [])
     } catch (error) {
       console.error('获取客户线索失败:', error)
       showNotification('error', '加载失败', '无法获取客户线索')
     }
   }, [user, showNotification])
+
+  // 状态和来源映射辅助函数
+  const mapOldStatusToNew = (oldStatus: string): string => {
+    switch (oldStatus) {
+      case 'pending': return 'new'
+      case 'processing': return 'contacted'
+      case 'completed': return 'converted'
+      case 'failed': return 'lost'
+      default: return 'new'
+    }
+  }
+
+  const mapOldSourceToNew = (oldSource: string): string => {
+    switch (oldSource) {
+      case 'excel': return 'excel_import'
+      case 'manual': return 'manual'
+      case 'scraped': return 'scraped'
+      default: return 'manual'
+    }
+  }
 
   // 获取产品资料
   const fetchMaterials = useCallback(async () => {

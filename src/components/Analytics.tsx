@@ -31,6 +31,26 @@ export default function Analytics() {
   const [loading, setLoading] = useState(true)
   const [timeRange, setTimeRange] = useState('30d')
 
+  // 状态和来源映射辅助函数
+  const mapOldStatusToNew = (oldStatus: string): string => {
+    switch (oldStatus) {
+      case 'pending': return 'new'
+      case 'processing': return 'contacted'
+      case 'completed': return 'converted'
+      case 'failed': return 'lost'
+      default: return 'new'
+    }
+  }
+
+  const mapOldSourceToNew = (oldSource: string): string => {
+    switch (oldSource) {
+      case 'excel': return 'excel_import'
+      case 'manual': return 'manual'
+      case 'scraped': return 'scraped'
+      default: return 'manual'
+    }
+  }
+
   // 获取分析数据
   const fetchAnalytics = useCallback(async () => {
     if (!user) return
@@ -56,13 +76,55 @@ export default function Analytics() {
           break
       }
 
-      // 获取客户线索统计
-      const { data: allLeads, error: leadsError } = await supabase
-        .from('customer_leads')
-        .select('*')
-        .eq('user_id', user.id)
+      // 获取客户线索统计 - 带回退机制
+      let allLeads, leadsError
+      try {
+        const result = await supabase
+          .from('customer_leads')
+          .select('*')
+          .eq('user_id', user.id)
 
-      if (leadsError) throw leadsError
+        allLeads = result.data
+        leadsError = result.error
+      } catch (e) {
+        leadsError = e
+      }
+
+      // 如果customer_leads表不存在，回退到leads表
+      if (leadsError && leadsError.message.includes('relation "public.customer_leads" does not exist')) {
+        console.log('customer_leads表不存在，回退到leads表')
+        const { data: leadsData, error: fallbackError } = await supabase
+          .from('leads')
+          .select('*')
+          .eq('user_id', user.id)
+
+        if (fallbackError) throw fallbackError
+
+        // 映射leads表数据到新格式
+        allLeads = leadsData?.map(lead => ({
+          id: lead.id,
+          user_id: lead.user_id,
+          customer_name: lead.customer_name || 'Unknown',
+          company_name: lead.customer_website || '',
+          email: lead.customer_email || '',
+          phone: lead.phone || '',
+          website: lead.customer_website || '',
+          source: mapOldSourceToNew(lead.source),
+          status: mapOldStatusToNew(lead.status),
+          notes: lead.notes || '',
+          industry: '',
+          company_size: '',
+          generated_email_subject: lead.generated_mail_subject || '',
+          generated_email_body: lead.generated_mail_body || '',
+          gmail_draft_id: lead.gmail_draft_id || '',
+          gmail_message_id: lead.gmail_message_id || '',
+          sent_at: lead.sent_at,
+          created_at: lead.created_at,
+          updated_at: lead.updated_at || lead.created_at
+        })) || []
+      } else if (leadsError) {
+        throw leadsError
+      }
 
       const totalLeads = allLeads?.length || 0
       const leadsThisMonth = allLeads?.filter(lead => 
@@ -294,6 +356,44 @@ export default function Analytics() {
               <p className="text-sm font-medium text-gray-500">邮件模板</p>
               <p className="text-2xl font-bold text-gray-900">{analytics.templatesUsed}</p>
               <p className="text-sm text-gray-500">产品资料 {analytics.materialsUploaded} 个</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* 时间趋势图 */}
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+        <h3 className="text-lg font-medium text-gray-900 mb-4">线索增长趋势</h3>
+        <div className="space-y-4">
+          <div className="grid grid-cols-3 gap-4 text-center">
+            <div>
+              <p className="text-2xl font-bold text-blue-600">{analytics.leadsThisWeek}</p>
+              <p className="text-sm text-gray-500">本周新增</p>
+            </div>
+            <div>
+              <p className="text-2xl font-bold text-green-600">{analytics.leadsThisMonth}</p>
+              <p className="text-sm text-gray-500">本月新增</p>
+            </div>
+            <div>
+              <p className="text-2xl font-bold text-purple-600">{analytics.totalLeads}</p>
+              <p className="text-sm text-gray-500">总计</p>
+            </div>
+          </div>
+          <div className="mt-4">
+            <div className="flex items-center justify-between text-sm text-gray-600 mb-2">
+              <span>增长趋势</span>
+              <span>
+                {analytics.leadsThisMonth > 0 && analytics.totalLeads > analytics.leadsThisMonth
+                  ? `较上月增长 ${(((analytics.leadsThisMonth) / (analytics.totalLeads - analytics.leadsThisMonth)) * 100).toFixed(1)}%`
+                  : '首月数据'
+                }
+              </span>
+            </div>
+            <div className="w-full bg-gray-200 rounded-full h-2">
+              <div
+                className="bg-gradient-to-r from-blue-500 to-green-500 h-2 rounded-full transition-all duration-500"
+                style={{ width: `${Math.min((analytics.leadsThisMonth / Math.max(analytics.totalLeads, 1)) * 100, 100)}%` }}
+              ></div>
             </div>
           </div>
         </div>

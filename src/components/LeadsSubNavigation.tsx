@@ -30,16 +30,16 @@ export default function LeadsSubNavigation({ onSubMenuChange, activeSubMenu }: L
   ]
 
   return (
-    <div className="bg-gray-50 border-b border-gray-200">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex space-x-6">
+    <div className="bg-gray-50 border-b border-gray-200 md:ml-64">
+      <div className="px-6 py-3">
+        <div className="flex flex-wrap gap-2 md:flex-nowrap md:space-x-4">
           {subMenuItems.map((item) => (
             <button
               key={item.id}
               onClick={() => onSubMenuChange(item.id)}
-              className={`group relative py-3 px-4 text-sm font-medium transition-colors duration-200 ${
+              className={`flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors duration-200 ${
                 activeSubMenu === item.id
-                  ? 'text-blue-600 border-b-2 border-blue-600 bg-white'
+                  ? 'bg-blue-100 text-blue-700'
                   : 'text-gray-600 hover:text-gray-900 hover:bg-white'
               }`}
             >
@@ -47,9 +47,6 @@ export default function LeadsSubNavigation({ onSubMenuChange, activeSubMenu }: L
                 {item.icon}
                 <span>{item.name}</span>
               </div>
-              {activeSubMenu === item.id && (
-                <div className="absolute inset-x-0 bottom-0 h-0.5 bg-blue-600"></div>
-              )}
             </button>
           ))}
         </div>

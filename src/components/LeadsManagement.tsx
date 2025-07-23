@@ -38,6 +38,7 @@ export default function LeadsManagement() {
     if (!user) return
 
     try {
+      // 首先尝试从customer_leads表获取数据
       let query = supabase
         .from('customer_leads')
         .select('*')
@@ -53,9 +54,65 @@ export default function LeadsManagement() {
         query = query.eq('source', sourceFilter)
       }
 
-      const { data, error } = await query
+      let data, error
+      try {
+        const result = await query
+        data = result.data
+        error = result.error
+      } catch (e) {
+        error = e
+      }
 
-      if (error) throw error
+      // 如果customer_leads表不存在，回退到leads表
+      if (error && error.message.includes('relation "public.customer_leads" does not exist')) {
+        console.log('customer_leads表不存在，回退到leads表')
+        let leadsQuery = supabase
+          .from('leads')
+          .select('*')
+          .eq('user_id', user.id)
+          .order('created_at', { ascending: false })
+
+        // 应用过滤器（需要映射状态）
+        if (statusFilter !== 'all') {
+          const mappedStatus = mapNewStatusToOld(statusFilter)
+          leadsQuery = leadsQuery.eq('status', mappedStatus)
+        }
+
+        if (sourceFilter !== 'all') {
+          const mappedSource = mapNewSourceToOld(sourceFilter)
+          leadsQuery = leadsQuery.eq('source', mappedSource)
+        }
+
+        const { data: leadsData, error: leadsError } = await leadsQuery
+
+        if (leadsError) throw leadsError
+
+        // 映射leads表数据到新格式
+        data = leadsData?.map(lead => ({
+          id: lead.id,
+          user_id: lead.user_id,
+          customer_name: lead.customer_name || 'Unknown',
+          company_name: lead.customer_website || '',
+          email: lead.customer_email || '',
+          phone: lead.phone || '',
+          website: lead.customer_website || '',
+          source: mapOldSourceToNew(lead.source),
+          status: mapOldStatusToNew(lead.status),
+          notes: lead.notes || '',
+          industry: '',
+          company_size: '',
+          generated_email_subject: lead.generated_mail_subject || '',
+          generated_email_body: lead.generated_mail_body || '',
+          gmail_draft_id: lead.gmail_draft_id || '',
+          gmail_message_id: lead.gmail_message_id || '',
+          sent_at: lead.sent_at,
+          created_at: lead.created_at,
+          updated_at: lead.updated_at || lead.created_at
+        })) || []
+      } else if (error) {
+        throw error
+      }
+
       setLeads(data || [])
     } catch (error) {
       console.error('获取线索失败:', error)
@@ -64,6 +121,45 @@ export default function LeadsManagement() {
       setLoading(false)
     }
   }, [user, statusFilter, sourceFilter, showNotification])
+
+  // 状态映射辅助函数
+  const mapOldStatusToNew = (oldStatus: string): string => {
+    switch (oldStatus) {
+      case 'pending': return 'new'
+      case 'processing': return 'contacted'
+      case 'completed': return 'converted'
+      case 'failed': return 'lost'
+      default: return 'new'
+    }
+  }
+
+  const mapNewStatusToOld = (newStatus: string): string => {
+    switch (newStatus) {
+      case 'new': return 'pending'
+      case 'contacted': return 'processing'
+      case 'converted': return 'completed'
+      case 'lost': return 'failed'
+      default: return 'pending'
+    }
+  }
+
+  const mapOldSourceToNew = (oldSource: string): string => {
+    switch (oldSource) {
+      case 'excel': return 'excel_import'
+      case 'manual': return 'manual'
+      case 'scraped': return 'scraped'
+      default: return 'manual'
+    }
+  }
+
+  const mapNewSourceToOld = (newSource: string): string => {
+    switch (newSource) {
+      case 'excel_import': return 'excel'
+      case 'manual': return 'manual'
+      case 'scraped': return 'scraped'
+      default: return 'manual'
+    }
+  }
 
   useEffect(() => {
     fetchLeads()
@@ -112,13 +208,33 @@ export default function LeadsManagement() {
     if (!confirm('确定要删除这条线索吗？此操作无法撤销。')) return
 
     try {
-      const { error } = await supabase
-        .from('customer_leads')
-        .delete()
-        .eq('id', leadId)
-        .eq('user_id', user?.id)
+      // 首先尝试从customer_leads表删除
+      let deleteError
+      try {
+        const result = await supabase
+          .from('customer_leads')
+          .delete()
+          .eq('id', leadId)
+          .eq('user_id', user?.id)
 
-      if (error) throw error
+        deleteError = result.error
+      } catch (e) {
+        deleteError = e
+      }
+
+      // 如果customer_leads表不存在，回退到leads表
+      if (deleteError && deleteError.message.includes('relation "public.customer_leads" does not exist')) {
+        console.log('customer_leads表不存在，回退到leads表')
+        const { error: leadsError } = await supabase
+          .from('leads')
+          .delete()
+          .eq('id', leadId)
+          .eq('user_id', user?.id)
+
+        if (leadsError) throw leadsError
+      } else if (deleteError) {
+        throw deleteError
+      }
 
       setLeads(prev => prev.filter(lead => lead.id !== leadId))
       showNotification('success', '删除成功', '线索已删除')
