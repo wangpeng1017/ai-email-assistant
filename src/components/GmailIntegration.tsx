@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 
 interface GmailAuthStatus {
@@ -21,7 +21,7 @@ export default function GmailIntegration({ onAuthComplete, className = '' }: Gma
   const [error, setError] = useState<string | null>(null)
 
   // 检查Gmail认证状态
-  const checkAuthStatus = async () => {
+  const checkAuthStatus = useCallback(async () => {
     if (!user || !session) return
 
     try {
@@ -38,7 +38,7 @@ export default function GmailIntegration({ onAuthComplete, className = '' }: Gma
     } catch (error) {
       console.error('Error checking Gmail auth status:', error)
     }
-  }
+  }, [user, session])
 
   // 启动Gmail OAuth流程
   const startGmailAuth = async () => {
@@ -149,7 +149,7 @@ export default function GmailIntegration({ onAuthComplete, className = '' }: Gma
 
   useEffect(() => {
     checkAuthStatus()
-  }, [user])
+  }, [checkAuthStatus])
 
   const getStatusIcon = () => {
     if (!authStatus) return '⏳'

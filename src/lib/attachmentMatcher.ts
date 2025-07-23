@@ -99,26 +99,27 @@ function extractSimpleKeywords(emailContent: EmailContent): string[] {
   return foundKeywords.slice(0, 10)
 }
 
-// 计算文本相似度
-function calculateTextSimilarity(text1: string, text2: string): number {
-  const words1 = text1.toLowerCase().split(/\s+/)
-  const words2 = text2.toLowerCase().split(/\s+/)
-  
-  const set1 = new Set(words1)
-  const set2 = new Set(words2)
-  
-  const intersection = new Set([...set1].filter(x => set2.has(x)))
-  const union = new Set([...set1, ...set2])
-  
-  return intersection.size / union.size // Jaccard相似度
-}
+// 计算文本相似度 (暂未使用，保留以备将来使用)
+// function calculateTextSimilarity(text1: string, text2: string): number {
+//   const words1 = text1.toLowerCase().split(/\s+/)
+//   const words2 = text2.toLowerCase().split(/\s+/)
+//
+//   const set1 = new Set(words1)
+//   const set2 = new Set(words2)
+//
+//   const intersection = new Set([...set1].filter(x => set2.has(x)))
+//   const union = new Set([...set1, ...set2])
+//
+//   return intersection.size / union.size // Jaccard相似度
+// }
 
 // 基于关键词匹配计算相关性分数
 function calculateKeywordRelevance(
-  emailKeywords: string[], 
+  emailKeywords: string[],
   material: ProductMaterial
 ): { score: number; matchedKeywords: string[] } {
-  const materialText = `${material.file_name} ${material.description || ''}`.toLowerCase()
+  // materialText暂未使用，但保留以备将来的文本匹配功能
+  // const materialText = `${material.file_name} ${material.description || ''}`.toLowerCase()
   const materialKeywords = material.keywords || []
   
   let score = 0

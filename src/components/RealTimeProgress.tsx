@@ -48,7 +48,7 @@ export default function RealTimeProgress({
   const [isVisible, setIsVisible] = useState(false)
   const [logs, setLogs] = useState<string[]>([])
   const intervalRef = useRef<NodeJS.Timeout | null>(null)
-  const wsRef = useRef<WebSocket | null>(null)
+  // const wsRef = useRef<WebSocket | null>(null) // 暂未使用WebSocket，保留以备将来使用
 
   // 初始化进度步骤
   const initializeSteps = (): ProgressStep[] => [
@@ -61,53 +61,47 @@ export default function RealTimeProgress({
     { id: 'complete', name: '完成处理', status: 'pending' }
   ]
 
-  // 获取进度信息
-  const fetchProgress = useCallback(async () => {
-    if (!user || !session || !batchId) return
-
-    try {
-      const response = await fetch(`/api/automation/progress?batchId=${batchId}`, {
-        headers: {
-          'Authorization': `Bearer ${session.access_token}`
-        }
-      })
-
-      if (response.ok) {
-        const data = await response.json()
-        updateProgress(data)
-      }
-    } catch (error) {
-      console.error('Error fetching progress:', error)
-    }
-  }, [user, session, batchId])
-
-  // 启动进度监控
-  const startProgressMonitoring = useCallback((totalItems: number = 1) => {
-    const now = Date.now()
-    setProgress({
-      totalItems,
-      completedItems: 0,
-      failedItems: 0,
-      steps: initializeSteps(),
-      startTime: now
-    })
-    setIsVisible(true)
-    setLogs([`${new Date().toLocaleTimeString()} - 开始处理 ${totalItems} 个客户线索`])
-
-    // 启动轮询
+  // 处理完成
+  const handleComplete = useCallback((results: BatchResults) => {
     if (intervalRef.current) {
       clearInterval(intervalRef.current)
+      intervalRef.current = null
     }
 
-    intervalRef.current = setInterval(() => {
-      fetchProgress()
-    }, 1000)
-  }, [fetchProgress])
+    setLogs(prev => [
+      ...prev,
+      `${new Date().toLocaleTimeString()} - 处理完成！`
+    ])
 
+    if (onComplete) {
+      onComplete(results)
+    }
 
+    // 3秒后自动隐藏
+    setTimeout(() => {
+      setIsVisible(false)
+    }, 3000)
+  }, [onComplete])
+
+  // 处理错误
+  const handleError = useCallback((error: string) => {
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current)
+      intervalRef.current = null
+    }
+
+    setLogs(prev => [
+      ...prev,
+      `${new Date().toLocaleTimeString()} - 错误: ${error}`
+    ])
+
+    if (onError) {
+      onError(error)
+    }
+  }, [onError])
 
   // 更新进度信息
-  const updateProgress = (data: Record<string, unknown>) => {
+  const updateProgress = useCallback((data: Record<string, unknown>) => {
     setProgress(prev => {
       if (!prev) return null
 
@@ -171,46 +165,50 @@ export default function RealTimeProgress({
 
       return newProgress
     })
-  }
+  }, [handleComplete, handleError])
 
-  // 处理完成
-  const handleComplete = (results: BatchResults) => {
+  // 获取进度信息
+  const fetchProgress = useCallback(async () => {
+    if (!user || !session || !batchId) return
+
+    try {
+      const response = await fetch(`/api/automation/progress?batchId=${batchId}`, {
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`
+        }
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        updateProgress(data)
+      }
+    } catch (error) {
+      console.error('Error fetching progress:', error)
+    }
+  }, [user, session, batchId, updateProgress])
+
+  // 启动进度监控
+  const startProgressMonitoring = useCallback((totalItems: number = 1) => {
+    const now = Date.now()
+    setProgress({
+      totalItems,
+      completedItems: 0,
+      failedItems: 0,
+      steps: initializeSteps(),
+      startTime: now
+    })
+    setIsVisible(true)
+    setLogs([`${new Date().toLocaleTimeString()} - 开始处理 ${totalItems} 个客户线索`])
+
+    // 启动轮询
     if (intervalRef.current) {
       clearInterval(intervalRef.current)
-      intervalRef.current = null
     }
 
-    setLogs(prev => [
-      ...prev,
-      `${new Date().toLocaleTimeString()} - 处理完成！`
-    ])
-
-    if (onComplete) {
-      onComplete(results)
-    }
-
-    // 3秒后自动隐藏
-    setTimeout(() => {
-      setIsVisible(false)
-    }, 3000)
-  }
-
-  // 处理错误
-  const handleError = (error: string) => {
-    if (intervalRef.current) {
-      clearInterval(intervalRef.current)
-      intervalRef.current = null
-    }
-
-    setLogs(prev => [
-      ...prev,
-      `${new Date().toLocaleTimeString()} - 错误: ${error}`
-    ])
-
-    if (onError) {
-      onError(error)
-    }
-  }
+    intervalRef.current = setInterval(() => {
+      fetchProgress()
+    }, 1000)
+  }, [fetchProgress])
 
   // 关闭进度显示
   const closeProgress = () => {
@@ -267,9 +265,9 @@ export default function RealTimeProgress({
       if (intervalRef.current) {
         clearInterval(intervalRef.current)
       }
-      if (wsRef.current) {
-        wsRef.current.close()
-      }
+      // if (wsRef.current) {
+      //   wsRef.current.close()
+      // }
     }
   }, [])
 
@@ -372,8 +370,8 @@ export default function RealTimeProgress({
             <h4 className="text-sm font-medium text-gray-700 mb-2">处理日志</h4>
             <div className="bg-gray-50 rounded-md p-3 max-h-32 overflow-y-auto">
               <div className="space-y-1">
-                {logs.slice(-10).map((log, index) => (
-                  <p key={index} className="text-xs text-gray-600 font-mono">
+                {logs.slice(-10).map((log, logIndex) => (
+                  <p key={logIndex} className="text-xs text-gray-600 font-mono">
                     {log}
                   </p>
                 ))}

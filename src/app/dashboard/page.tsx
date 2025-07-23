@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, Suspense } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import { useSearchParams } from 'next/navigation'
 import ProtectedRoute from '@/components/ProtectedRoute'
@@ -22,8 +22,9 @@ interface LeadStats {
   failed: number
 }
 
-export default function Dashboard() {
-  const { user, signOut } = useAuth()
+// 内部组件处理搜索参数
+function DashboardContent() {
+  const { user } = useAuth()
   const searchParams = useSearchParams()
   const tabFromUrl = searchParams.get('tab')
 
@@ -407,5 +408,21 @@ export default function Dashboard() {
         )}
       </DashboardLayout>
     </ProtectedRoute>
+  )
+}
+
+// 主导出组件包装在Suspense中
+export default function Dashboard() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">加载中...</p>
+        </div>
+      </div>
+    }>
+      <DashboardContent />
+    </Suspense>
   )
 }

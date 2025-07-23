@@ -1,12 +1,12 @@
 import { google } from 'googleapis'
 import { OAuth2Client } from 'google-auth-library'
 
-// Gmail API配置
-const GMAIL_SCOPES = [
-  'https://www.googleapis.com/auth/gmail.compose',
-  'https://www.googleapis.com/auth/gmail.modify',
-  'https://mail.google.com/'
-]
+// Gmail API配置 (暂未使用，保留以备将来使用)
+// const GMAIL_SCOPES = [
+//   'https://www.googleapis.com/auth/gmail.compose',
+//   'https://www.googleapis.com/auth/gmail.modify',
+//   'https://mail.google.com/'
+// ]
 
 // 邮件草稿接口
 export interface EmailDraft {

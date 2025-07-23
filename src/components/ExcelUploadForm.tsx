@@ -29,7 +29,7 @@ export default function ExcelUploadForm({
   const { showNotification } = useNotification()
 
   // 验证Excel数据格式
-  const validateLeadData = (data: Record<string, unknown>[]): LeadData[] => {
+  const validateLeadData = useCallback((data: Record<string, unknown>[]): LeadData[] => {
     const validLeads: LeadData[] = []
     const errors: string[] = []
 
@@ -100,7 +100,7 @@ export default function ExcelUploadForm({
     }
 
     return validLeads
-  }
+  }, [showNotification])
 
   // 解析Excel文件
   const parseExcelFile = useCallback((file: File) => {
@@ -182,7 +182,7 @@ export default function ExcelUploadForm({
     }
 
     reader.readAsArrayBuffer(file)
-  }, [onDataParsed, onUploadStart, onUploadComplete, showNotification])
+  }, [onDataParsed, onUploadStart, onUploadComplete, showNotification, validateLeadData])
 
   // 文件拖拽处理
   const onDrop = useCallback((acceptedFiles: File[]) => {

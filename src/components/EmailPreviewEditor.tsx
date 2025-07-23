@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useAuth } from '@/contexts/AuthContext'
+// import { useAuth } from '@/contexts/AuthContext' // 暂未使用，保留以备将来功能扩展
 
 interface ProductMaterial {
   id: string
@@ -26,12 +26,11 @@ interface EmailPreviewEditorProps {
 export default function EmailPreviewEditor({
   initialContent,
   attachments,
-  leadId: _leadId,
+  leadId: _leadId, // 暂未使用，保留以备将来功能扩展
   onSave,
   onSendDraft,
   className = ''
 }: EmailPreviewEditorProps) {
-  const { user: _user } = useAuth()
   const [content, setContent] = useState(initialContent)
   const [isEditing, setIsEditing] = useState(false)
   const [loading, setLoading] = useState(false)
