@@ -38,22 +38,70 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // 检查文件类型
+    // 检查文件类型 - 扩展支持更多文件类型
     const allowedTypes = [
+      // 文档类型
       'application/pdf',
       'application/msword',
       'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
       'application/vnd.ms-powerpoint',
       'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+      'application/vnd.ms-excel',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+
+      // 文本类型
       'text/plain',
+      'text/csv',
+      'text/html',
+      'text/markdown',
+      'text/xml',
+
+      // 图片类型
       'image/jpeg',
       'image/png',
-      'image/gif'
+      'image/gif',
+      'image/webp',
+      'image/svg+xml',
+      'image/bmp',
+      'image/tiff',
+
+      // 其他常用类型
+      'application/json',
+      'application/xml',
+      'application/zip',
+      'application/x-zip-compressed',
+      'application/octet-stream', // 通用二进制文件
+
+      // 空MIME类型（某些文件可能没有MIME类型）
+      '',
+      'application/x-msdownload'
     ]
 
-    if (!allowedTypes.includes(file.type)) {
+    // 获取文件扩展名
+    const getFileExtension = (filename: string) => {
+      return filename.toLowerCase().split('.').pop() || ''
+    }
+
+    const allowedExtensions = [
+      'pdf', 'doc', 'docx', 'ppt', 'pptx', 'xls', 'xlsx',
+      'txt', 'csv', 'html', 'htm', 'md', 'xml',
+      'jpg', 'jpeg', 'png', 'gif', 'webp', 'svg', 'bmp', 'tiff',
+      'json', 'zip', 'rar', '7z'
+    ]
+
+    const fileExtension = getFileExtension(file.name)
+
+    // 检查MIME类型或文件扩展名
+    if (!allowedTypes.includes(file.type) && !allowedExtensions.includes(fileExtension)) {
+      console.log('文件验证失败:', {
+        fileName: file.name,
+        fileType: file.type,
+        fileExtension: fileExtension,
+        allowedTypes: allowedTypes.slice(0, 5), // 只记录前几个避免日志过长
+        allowedExtensions: allowedExtensions.slice(0, 10)
+      })
       return NextResponse.json(
-        { success: false, error: '不支持的文件类型' },
+        { success: false, error: `不支持的文件类型。支持的格式：${allowedExtensions.join(', ')}` },
         { status: 400 }
       )
     }

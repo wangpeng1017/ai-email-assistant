@@ -47,8 +47,9 @@ export default function LeadsManagement() {
 
   // 获取线索列表
   const fetchLeads = useCallback(async () => {
-    if (!user) return
+    if (!user || loading) return // 防止重复请求
 
+    setLoading(true)
     try {
       // 首先尝试从customer_leads表获取数据
       let query = supabase
@@ -77,7 +78,7 @@ export default function LeadsManagement() {
         error = e as Error
       }
 
-      // 如果customer_leads表不存在，回退到leads表
+      // 如果customer_leads表不存在，回退到leads表（只尝试一次）
       if (error && 'message' in error && error.message.includes('relation "public.customer_leads" does not exist')) {
         console.log('customer_leads表不存在，回退到leads表')
         let leadsQuery = supabase
@@ -122,11 +123,12 @@ export default function LeadsManagement() {
       setLeads(data || [])
     } catch (error) {
       console.error('获取线索失败:', error)
+      setLeads([]) // 设置空数组，避免无限重试
       showNotification('error', '加载失败', '无法获取客户线索列表')
     } finally {
       setLoading(false)
     }
-  }, [user, statusFilter, sourceFilter, showNotification])
+  }, [user, statusFilter, sourceFilter, showNotification, loading])
 
   // 状态映射辅助函数
   const mapOldStatusToNew = (oldStatus: string): string => {

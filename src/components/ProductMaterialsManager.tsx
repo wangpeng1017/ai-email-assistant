@@ -23,14 +23,24 @@ export default function ProductMaterialsManager() {
   const [materials, setMaterials] = useState<ProductMaterial[]>([])
   const [loading, setLoading] = useState(true)
   const [uploading, setUploading] = useState(false)
+  const [lastFetchTime, setLastFetchTime] = useState(0)
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [_selectedFiles, setSelectedFiles] = useState<FileList | null>(null)
   const [dragActive, setDragActive] = useState(false)
 
   // 获取产品资料列表
   const fetchMaterials = useCallback(async () => {
-    if (!user) return
+    if (!user || loading) return // 防止重复请求
 
+    // 防抖：如果距离上次请求不到1秒，则跳过
+    const now = Date.now()
+    if (now - lastFetchTime < 1000) {
+      console.log('请求过于频繁，跳过')
+      return
+    }
+    setLastFetchTime(now)
+
+    setLoading(true)
     try {
       const response = await fetch(`/api/materials/upload?userId=${user.id}`)
       const result = await response.json()
@@ -46,7 +56,7 @@ export default function ProductMaterialsManager() {
     } finally {
       setLoading(false)
     }
-  }, [user, showNotification])
+  }, [user, showNotification, loading, lastFetchTime])
 
   useEffect(() => {
     fetchMaterials()
