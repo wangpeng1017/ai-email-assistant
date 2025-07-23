@@ -8,6 +8,11 @@ import DashboardLayout from '@/components/DashboardLayout'
 import ManualInputForm from '@/components/ManualInputForm'
 import BatchImportForm from '@/components/BatchImportForm'
 import WebScrapingForm from '@/components/WebScrapingForm'
+import ProductMaterialsManager from '@/components/ProductMaterialsManager'
+import LeadsManagement from '@/components/LeadsManagement'
+import EmailTemplates from '@/components/EmailTemplates'
+import Analytics from '@/components/Analytics'
+import Settings from '@/components/Settings'
 import LeadsList from '@/components/LeadsList'
 import NavigationTabs from '@/components/NavigationTabs'
 import Notification, { useNotification } from '@/components/Notification'
@@ -373,38 +378,23 @@ function DashboardContent() {
 
         {/* 其他视图的占位符 */}
         {currentView === 'leads' && (
-          <div className="text-center py-12">
-            <h2 className="text-2xl font-bold text-gray-900 mb-4">客户线索管理</h2>
-            <p className="text-gray-600">客户线索管理功能正在开发中...</p>
-          </div>
+          <LeadsManagement />
         )}
 
         {currentView === 'materials' && (
-          <div className="text-center py-12">
-            <h2 className="text-2xl font-bold text-gray-900 mb-4">产品资料管理</h2>
-            <p className="text-gray-600">产品资料管理功能正在开发中...</p>
-          </div>
+          <ProductMaterialsManager />
         )}
 
         {currentView === 'templates' && (
-          <div className="text-center py-12">
-            <h2 className="text-2xl font-bold text-gray-900 mb-4">邮件模板</h2>
-            <p className="text-gray-600">邮件模板功能即将推出...</p>
-          </div>
+          <EmailTemplates />
         )}
 
         {currentView === 'analytics' && (
-          <div className="text-center py-12">
-            <h2 className="text-2xl font-bold text-gray-900 mb-4">数据分析</h2>
-            <p className="text-gray-600">数据分析功能即将推出...</p>
-          </div>
+          <Analytics />
         )}
 
         {currentView === 'settings' && (
-          <div className="text-center py-12">
-            <h2 className="text-2xl font-bold text-gray-900 mb-4">设置</h2>
-            <p className="text-gray-600">设置功能正在开发中...</p>
-          </div>
+          <Settings />
         )}
       </DashboardLayout>
     </ProtectedRoute>

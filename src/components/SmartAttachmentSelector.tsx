@@ -90,7 +90,7 @@ export default function SmartAttachmentSelector({
     } finally {
       setLoading(false)
     }
-  }, [user, session, emailContent.subject, emailContent.body, emailContent, leadId])
+  }, [user, session, emailContent, leadId])
 
   // 切换附件选择
   const toggleAttachment = (materialId: string) => {
