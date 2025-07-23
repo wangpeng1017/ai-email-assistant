@@ -32,6 +32,18 @@ export default function LeadsManagement() {
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
   const [sourceFilter, setSourceFilter] = useState('all')
+  const [showAddForm, setShowAddForm] = useState(false)
+  const [showImportModal, setShowImportModal] = useState(false)
+  const [newLead, setNewLead] = useState({
+    customer_name: '',
+    company_name: '',
+    email: '',
+    phone: '',
+    website: '',
+    notes: ''
+  })
+  const [importFile, setImportFile] = useState<File | null>(null)
+  const [importing, setImporting] = useState(false)
 
   // 获取线索列表
   const fetchLeads = useCallback(async () => {
@@ -152,6 +164,143 @@ export default function LeadsManagement() {
       case 'manual': return 'manual'
       case 'scraped': return 'scraped'
       default: return 'manual'
+    }
+  }
+
+  // 手动添加线索
+  const addLead = async () => {
+    if (!user || !newLead.customer_name.trim()) {
+      showNotification('error', '验证失败', '请填写客户姓名')
+      return
+    }
+
+    try {
+      const leadData = {
+        user_id: user.id,
+        customer_name: newLead.customer_name.trim(),
+        company_name: newLead.company_name.trim() || null,
+        email: newLead.email.trim() || null,
+        phone: newLead.phone.trim() || null,
+        website: newLead.website.trim() || null,
+        source: 'manual',
+        status: 'new',
+        notes: newLead.notes.trim() || null,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      }
+
+      // 首先尝试添加到customer_leads表
+      // eslint-disable-next-line prefer-const
+      let { data, error } = await supabase
+        .from('customer_leads')
+        .insert([leadData])
+        .select()
+
+      // 如果customer_leads表不存在，回退到leads表
+      if (error && 'message' in error && error.message.includes('relation "public.customer_leads" does not exist')) {
+        console.log('customer_leads表不存在，回退到leads表')
+        const leadsData = {
+          user_id: user.id,
+          customer_name: leadData.customer_name,
+          customer_email: leadData.email,
+          customer_website: leadData.website,
+          source: 'manual',
+          status: 'pending',
+          notes: leadData.notes,
+          created_at: leadData.created_at,
+          updated_at: leadData.updated_at
+        }
+
+        const { data: leadsResult, error: leadsError } = await supabase
+          .from('leads')
+          .insert([leadsData])
+          .select()
+
+        if (leadsError) throw leadsError
+        data = leadsResult
+      } else if (error) {
+        throw error
+      }
+
+      if (data && data.length > 0) {
+        // 重新获取线索列表
+        await fetchLeads()
+
+        // 重置表单
+        setNewLead({
+          customer_name: '',
+          company_name: '',
+          email: '',
+          phone: '',
+          website: '',
+          notes: ''
+        })
+        setShowAddForm(false)
+
+        showNotification('success', '添加成功', '客户线索已成功添加')
+      }
+    } catch (error) {
+      console.error('添加线索失败:', error)
+      showNotification('error', '添加失败', '无法添加客户线索')
+    }
+  }
+
+  // 批量导入线索
+  const importLeads = async () => {
+    if (!user || !importFile) {
+      showNotification('error', '验证失败', '请选择要导入的文件')
+      return
+    }
+
+    setImporting(true)
+    try {
+      const formData = new FormData()
+      formData.append('file', importFile)
+      formData.append('userId', user.id)
+
+      const response = await fetch('/api/leads/import', {
+        method: 'POST',
+        body: formData
+      })
+
+      if (!response.ok) {
+        throw new Error('导入失败')
+      }
+
+      const result = await response.json()
+
+      if (result.success) {
+        await fetchLeads()
+        setImportFile(null)
+        setShowImportModal(false)
+        showNotification('success', '导入成功', `成功导入 ${result.count} 条线索`)
+      } else {
+        throw new Error(result.error || '导入失败')
+      }
+    } catch (error) {
+      console.error('导入线索失败:', error)
+      showNotification('error', '导入失败', '无法导入客户线索')
+    } finally {
+      setImporting(false)
+    }
+  }
+
+  // 处理文件选择
+  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (file) {
+      const validTypes = [
+        'application/vnd.ms-excel',
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        'text/csv'
+      ]
+
+      if (validTypes.includes(file.type) || file.name.endsWith('.csv') || file.name.endsWith('.xlsx') || file.name.endsWith('.xls')) {
+        setImportFile(file)
+      } else {
+        showNotification('error', '文件格式错误', '请选择Excel或CSV文件')
+        event.target.value = ''
+      }
     }
   }
 
@@ -299,6 +448,29 @@ export default function LeadsManagement() {
             <div className="text-sm text-purple-600">已转化</div>
           </div>
         </div>
+      </div>
+
+      {/* 操作按钮 */}
+      <div className="flex flex-wrap gap-4">
+        <button
+          onClick={() => setShowAddForm(true)}
+          className="inline-flex items-center px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200"
+        >
+          <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+          </svg>
+          手动添加线索
+        </button>
+
+        <button
+          onClick={() => setShowImportModal(true)}
+          className="inline-flex items-center px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-colors duration-200"
+        >
+          <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+          </svg>
+          批量导入
+        </button>
       </div>
 
       {/* 搜索和过滤 */}
@@ -459,6 +631,186 @@ export default function LeadsManagement() {
           )}
         </div>
       </div>
+
+      {/* 手动添加线索模态框 */}
+      {showAddForm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4">
+            <h3 className="text-lg font-medium text-gray-900 mb-4">添加新线索</h3>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  客户姓名 *
+                </label>
+                <input
+                  type="text"
+                  value={newLead.customer_name}
+                  onChange={(e) => setNewLead({...newLead, customer_name: e.target.value})}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="请输入客户姓名"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  公司名称
+                </label>
+                <input
+                  type="text"
+                  value={newLead.company_name}
+                  onChange={(e) => setNewLead({...newLead, company_name: e.target.value})}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="请输入公司名称"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  邮箱地址
+                </label>
+                <input
+                  type="email"
+                  value={newLead.email}
+                  onChange={(e) => setNewLead({...newLead, email: e.target.value})}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="请输入邮箱地址"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  电话号码
+                </label>
+                <input
+                  type="tel"
+                  value={newLead.phone}
+                  onChange={(e) => setNewLead({...newLead, phone: e.target.value})}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="请输入电话号码"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  网站地址
+                </label>
+                <input
+                  type="url"
+                  value={newLead.website}
+                  onChange={(e) => setNewLead({...newLead, website: e.target.value})}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="请输入网站地址"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  备注信息
+                </label>
+                <textarea
+                  value={newLead.notes}
+                  onChange={(e) => setNewLead({...newLead, notes: e.target.value})}
+                  rows={3}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="请输入备注信息"
+                />
+              </div>
+            </div>
+
+            <div className="flex justify-end space-x-3 mt-6">
+              <button
+                onClick={() => {
+                  setShowAddForm(false)
+                  setNewLead({
+                    customer_name: '',
+                    company_name: '',
+                    email: '',
+                    phone: '',
+                    website: '',
+                    notes: ''
+                  })
+                }}
+                className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500"
+              >
+                取消
+              </button>
+              <button
+                onClick={addLead}
+                className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+              >
+                添加线索
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 批量导入模态框 */}
+      {showImportModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4">
+            <h3 className="text-lg font-medium text-gray-900 mb-4">批量导入线索</h3>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  选择文件
+                </label>
+                <input
+                  type="file"
+                  accept=".xlsx,.xls,.csv"
+                  onChange={handleFileSelect}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                />
+                <p className="mt-1 text-xs text-gray-500">
+                  支持Excel (.xlsx, .xls) 和CSV (.csv) 格式
+                </p>
+              </div>
+
+              {importFile && (
+                <div className="p-3 bg-blue-50 rounded-md">
+                  <p className="text-sm text-blue-700">
+                    已选择文件: {importFile.name}
+                  </p>
+                  <p className="text-xs text-blue-600">
+                    文件大小: {(importFile.size / 1024).toFixed(1)} KB
+                  </p>
+                </div>
+              )}
+
+              <div className="p-3 bg-yellow-50 rounded-md">
+                <p className="text-sm text-yellow-700 font-medium mb-1">文件格式要求：</p>
+                <ul className="text-xs text-yellow-600 space-y-1">
+                  <li>• 第一行为标题行</li>
+                  <li>• 必需列：客户姓名</li>
+                  <li>• 可选列：公司名称、邮箱、电话、网站、备注</li>
+                </ul>
+              </div>
+            </div>
+
+            <div className="flex justify-end space-x-3 mt-6">
+              <button
+                onClick={() => {
+                  setShowImportModal(false)
+                  setImportFile(null)
+                }}
+                disabled={importing}
+                className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 disabled:opacity-50"
+              >
+                取消
+              </button>
+              <button
+                onClick={importLeads}
+                disabled={!importFile || importing}
+                className="px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {importing ? '导入中...' : '开始导入'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

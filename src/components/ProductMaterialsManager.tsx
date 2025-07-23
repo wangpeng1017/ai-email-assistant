@@ -62,51 +62,31 @@ export default function ProductMaterialsManager() {
     try {
       for (let i = 0; i < files.length; i++) {
         const file = files[i]
-        
+
         // 检查文件大小 (限制10MB)
         if (file.size > 10 * 1024 * 1024) {
           showNotification('error', '文件过大', `${file.name} 超过10MB限制`)
           continue
         }
 
-        // 生成唯一文件名
-        const fileExt = file.name.split('.').pop()
-        const fileName = `${Date.now()}_${Math.random().toString(36).substring(2)}.${fileExt}`
-        const filePath = `${user.id}/materials/${fileName}`
+        // 使用API端点上传文件
+        const formData = new FormData()
+        formData.append('file', file)
+        formData.append('userId', user.id)
 
-        // 上传到Supabase Storage
-        const { error: uploadError } = await supabase.storage
-          .from('product-materials')
-          .upload(filePath, file)
+        const response = await fetch('/api/materials/upload', {
+          method: 'POST',
+          body: formData
+        })
 
-        if (uploadError) {
-          console.error('文件上传失败:', uploadError)
-          showNotification('error', '上传失败', `${file.name} 上传失败`)
+        const result = await response.json()
+
+        if (!response.ok || !result.success) {
+          showNotification('error', '上传失败', result.error || `${file.name} 上传失败`)
           continue
         }
 
-        // 保存文件信息到数据库
-        const { data, error: dbError } = await supabase
-          .from('product_materials')
-          .insert({
-            user_id: user.id,
-            file_name: file.name,
-            storage_path: filePath,
-            file_type: file.type,
-            file_size: file.size
-          })
-          .select()
-          .single()
-
-        if (dbError) {
-          console.error('数据库保存失败:', dbError)
-          // 删除已上传的文件
-          await supabase.storage.from('product-materials').remove([filePath])
-          showNotification('error', '保存失败', `${file.name} 信息保存失败`)
-          continue
-        }
-
-        uploadResults.push(data)
+        uploadResults.push(result.data)
       }
 
       if (uploadResults.length > 0) {

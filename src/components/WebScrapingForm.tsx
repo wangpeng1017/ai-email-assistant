@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import { useNotification } from '@/components/Notification'
+import { supabase } from '@/lib/supabase'
 
 interface ScrapedLead {
   company_name: string
@@ -38,6 +39,64 @@ export default function WebScrapingForm({
       return true
     } catch {
       return false
+    }
+  }
+
+  // 保存爬取的线索到数据库
+  const saveScrapedLeads = async (leads: ScrapedLead[]) => {
+    if (!user || leads.length === 0) return
+
+    try {
+      const leadsToSave = leads.map(lead => ({
+        user_id: user.id,
+        customer_name: lead.company_name,
+        company_name: lead.company_name,
+        email: lead.email || null,
+        website: lead.website_url,
+        source: 'scraped',
+        status: 'new',
+        notes: lead.description || null,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      }))
+
+      // 首先尝试保存到customer_leads表
+      // eslint-disable-next-line prefer-const
+      let { error } = await supabase
+        .from('customer_leads')
+        .insert(leadsToSave)
+
+      // 如果customer_leads表不存在，回退到leads表
+      if (error && 'message' in error && error.message.includes('relation "public.customer_leads" does not exist')) {
+        console.log('customer_leads表不存在，回退到leads表')
+
+        const fallbackLeads = leadsToSave.map(lead => ({
+          user_id: lead.user_id,
+          customer_name: lead.customer_name,
+          customer_email: lead.email,
+          customer_website: lead.website,
+          source: 'scraped',
+          status: 'pending',
+          notes: lead.notes,
+          created_at: lead.created_at,
+          updated_at: lead.updated_at
+        }))
+
+        const { error: fallbackError } = await supabase
+          .from('leads')
+          .insert(fallbackLeads)
+
+        if (fallbackError) {
+          throw fallbackError
+        }
+      } else if (error) {
+        throw error
+      }
+
+      console.log(`成功保存 ${leads.length} 条爬取的线索到数据库`)
+    } catch (error) {
+      console.error('保存爬取数据失败:', error)
+      showNotification('warning', '保存警告', '爬取成功但保存到数据库时出现问题')
     }
   }
 
@@ -85,7 +144,11 @@ export default function WebScrapingForm({
         setScrapedLeads(data.leads)
         // 默认选中所有爬取到的线索
         setSelectedLeads(new Set(data.leads.map((_: ScrapedLead, index: number) => index)))
-        showNotification('success', '爬取成功', `成功爬取到 ${data.leads.length} 条客户线索`)
+
+        // 自动保存爬取的数据到数据库
+        await saveScrapedLeads(data.leads)
+
+        showNotification('success', '爬取成功', `成功爬取到 ${data.leads.length} 条客户线索并已保存`)
       } else {
         showNotification('warning', '爬取完成', '未找到有效的客户线索，请检查目标网站')
       }
