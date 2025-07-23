@@ -370,8 +370,8 @@ export default function RealTimeProgress({
             <h4 className="text-sm font-medium text-gray-700 mb-2">处理日志</h4>
             <div className="bg-gray-50 rounded-md p-3 max-h-32 overflow-y-auto">
               <div className="space-y-1">
-                {logs.slice(-10).map((log, logIndex) => (
-                  <p key={logIndex} className="text-xs text-gray-600 font-mono">
+                {logs.slice(-10).map((log, _logIndex) => (
+                  <p key={_logIndex} className="text-xs text-gray-600 font-mono">
                     {log}
                   </p>
                 ))}

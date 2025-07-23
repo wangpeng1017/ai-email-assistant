@@ -23,6 +23,7 @@ export default function ProductMaterialsManager() {
   const [materials, setMaterials] = useState<ProductMaterial[]>([])
   const [loading, setLoading] = useState(true)
   const [uploading, setUploading] = useState(false)
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [_selectedFiles, setSelectedFiles] = useState<FileList | null>(null)
   const [dragActive, setDragActive] = useState(false)
 

@@ -16,14 +16,19 @@ interface WebScrapingFormProps {
   onSubmit: () => void
 }
 
-export default function WebScrapingForm({ onSubmit }: WebScrapingFormProps) {
+export default function WebScrapingForm({
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  onSubmit
+}: WebScrapingFormProps) {
   const { user } = useAuth()
   const { showNotification } = useNotification()
   const [targetUrl, setTargetUrl] = useState('')
   const [crawlDepth, setCrawlDepth] = useState('1')
   const [maxResults, setMaxResults] = useState('50')
   const [isProcessing, setIsProcessing] = useState(false)
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [scrapedLeads, setScrapedLeads] = useState<ScrapedLead[]>([])
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [selectedLeads, setSelectedLeads] = useState<Set<number>>(new Set())
 
   // URL验证

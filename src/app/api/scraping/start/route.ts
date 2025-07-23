@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import * as cheerio from 'cheerio'
 
+// 定义Cheerio元素类型
+type CheerioElement = cheerio.Cheerio<cheerio.Element>
+
 interface ScrapedLead {
   company_name: string
   website_url: string
@@ -163,7 +166,7 @@ function extractCompanyInfo($: cheerio.Root, baseUrl: string): ScrapedLead[] {
 }
 
 // 从元素中提取线索信息
-function extractLeadFromElement($element: any, $: cheerio.Root, baseUrl: string): ScrapedLead | null {
+function extractLeadFromElement($element: CheerioElement, $: cheerio.Root, baseUrl: string): ScrapedLead | null {
   // 提取公司名称
   const nameSelectors = ['h1', 'h2', 'h3', '.name', '.title', '.company-name', '[class*="name"]']
   let companyName = ''

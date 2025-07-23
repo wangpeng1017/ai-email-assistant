@@ -54,7 +54,7 @@ export function validateSupabaseConfig() {
       if (cleanedUrl.includes('placeholder')) {
         throw new Error(`NEXT_PUBLIC_SUPABASE_URL has invalid format: "${rawUrl}"`)
       }
-    } catch (error) {
+    } catch {
       throw new Error(`NEXT_PUBLIC_SUPABASE_URL is not a valid URL: "${rawUrl}"`)
     }
 

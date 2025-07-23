@@ -26,6 +26,7 @@ interface EmailPreviewEditorProps {
 export default function EmailPreviewEditor({
   initialContent,
   attachments,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   leadId: _leadId, // 暂未使用，保留以备将来功能扩展
   onSave,
   onSendDraft,

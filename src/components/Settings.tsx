@@ -22,6 +22,7 @@ interface UserSettings {
 export default function Settings() {
   const { user, signOut } = useAuth()
   const { showNotification } = useNotification()
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [_settings, _setSettings] = useState<UserSettings | null>(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
