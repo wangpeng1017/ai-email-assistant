@@ -141,3 +141,40 @@ bundle-analyzer/
 # 部署相关
 deployment-logs/
 deploy.log
+
+# Git性能优化 - 额外忽略项
+# 构建分析和统计
+build-stats.json
+webpack-bundle-analyzer-report.html
+.webpack/
+.turbo/
+
+# 测试和覆盖率
+jest-coverage/
+.jest-cache/
+test-results/
+
+# 开发工具缓存
+.vscode/settings.json
+.vscode/launch.json
+.vscode/tasks.json
+.vscode/extensions.json
+
+# 临时和工作文件
+*.orig
+*.rej
+*.patch
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+
+# 性能监控和分析
+lighthouse-report.html
+performance-report.json
+bundle-size-report.json
+
+# 自动生成的文件
+auto-generated/
+generated/
+.auto-generated/
