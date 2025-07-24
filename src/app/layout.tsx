@@ -2,6 +2,9 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/contexts/AuthContext";
+import { AppQueryProvider } from "@/providers/QueryProvider";
+
+// 移除StagewiseToolbar，因为它在Server Component中不能使用ssr: false
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -28,9 +31,12 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <AuthProvider>
-          {children}
-        </AuthProvider>
+        <AppQueryProvider>
+          <AuthProvider>
+            {children}
+            {/* StagewiseToolbar已移除 */}
+          </AuthProvider>
+        </AppQueryProvider>
       </body>
     </html>
   );

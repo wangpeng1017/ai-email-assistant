@@ -8,8 +8,8 @@ import DashboardLayout from '@/components/DashboardLayout'
 import MainNavigation from '@/components/MainNavigation'
 import LeadsSubNavigation from '@/components/LeadsSubNavigation'
 import WebScrapingForm from '@/components/WebScrapingForm'
-import ProductMaterialsManager from '@/components/ProductMaterialsManager'
-import LeadsManagement from '@/components/LeadsManagement'
+import MaterialsContainer from '@/components/materials/MaterialsContainer'
+import LeadsContainer from '@/components/leads/LeadsContainer'
 import AIEmailWorkflow from '@/components/AIEmailWorkflow'
 import EmailTemplates from '@/components/EmailTemplates'
 import Analytics from '@/components/Analytics'
@@ -146,7 +146,7 @@ function DashboardContent() {
       case 'leads':
         return renderLeadsContent()
       case 'materials':
-        return <ProductMaterialsManager />
+        return <MaterialsContainer />
       case 'ai-email':
         return <AIEmailWorkflow />
       case 'templates':
@@ -163,11 +163,11 @@ function DashboardContent() {
   const renderLeadsContent = () => {
     switch (activeSubMenu) {
       case 'management':
-        return <LeadsManagement />
+        return <LeadsContainer />
       case 'scraping':
         return <WebScrapingForm onSubmit={handleFormSubmit} />
       default:
-        return <LeadsManagement />
+        return <LeadsContainer />
     }
   }
 

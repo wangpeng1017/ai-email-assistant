@@ -4,6 +4,8 @@ import { useState, useEffect, useCallback } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import { useNotification } from '@/components/Notification'
 import { supabase } from '@/lib/supabase'
+import { useApiCache } from '@/hooks/useDataCache'
+import { useApiPerformanceMonitor } from '@/hooks/usePerformanceMonitor'
 
 interface ProductMaterial {
   id: string
@@ -20,6 +22,8 @@ interface ProductMaterial {
 export default function ProductMaterialsManager() {
   const { user } = useAuth()
   const { showNotification } = useNotification()
+  const cache = useApiCache()
+  const performanceMonitor = useApiPerformanceMonitor()
   const [materials, setMaterials] = useState<ProductMaterial[]>([])
   const [loading, setLoading] = useState(true)
   const [uploading, setUploading] = useState(false)
@@ -32,9 +36,23 @@ export default function ProductMaterialsManager() {
   const fetchMaterials = useCallback(async () => {
     if (!user || loading) return // 防止重复请求
 
-    // 防抖：如果距离上次请求不到1秒，则跳过
+    const cacheKey = {
+      userId: user.id,
+      action: 'fetchMaterials'
+    }
+
+    // 检查缓存
+    const cachedData = cache.get(cacheKey)
+    if (cachedData) {
+      console.log('📦 使用缓存的材料数据')
+      setMaterials(cachedData as ProductMaterial[])
+      setLoading(false)
+      return
+    }
+
+    // 防抖：如果距离上次请求不到2秒，则跳过
     const now = Date.now()
-    if (now - lastFetchTime < 1000) {
+    if (now - lastFetchTime < 2000) {
       console.log('请求过于频繁，跳过')
       return
     }
@@ -42,21 +60,33 @@ export default function ProductMaterialsManager() {
 
     setLoading(true)
     try {
-      const response = await fetch(`/api/materials/upload?userId=${user.id}`)
-      const result = await response.json()
+      const result = await performanceMonitor.measureApiCall(
+        'materials/upload',
+        async () => {
+          const response = await fetch(`/api/materials/upload?userId=${user.id}`)
+          return response.json()
+        }
+      )
 
-      if (!response.ok || !result.success) {
+      if (!result.success) {
         throw new Error(result.error || '获取材料列表失败')
       }
 
-      setMaterials(result.data || [])
+      const finalData = result.data || []
+      setMaterials(finalData)
+
+      // 保存到缓存
+      cache.set(cacheKey, finalData)
+      console.log('💾 材料数据已缓存')
+
     } catch (error) {
       console.error('获取产品资料失败:', error)
+      setMaterials([]) // 设置空数组，避免无限重试
       showNotification('error', '加载失败', '无法获取产品资料列表')
     } finally {
       setLoading(false)
     }
-  }, [user, showNotification, loading, lastFetchTime])
+  }, [user, showNotification, loading, lastFetchTime, cache, performanceMonitor])
 
   useEffect(() => {
     fetchMaterials()

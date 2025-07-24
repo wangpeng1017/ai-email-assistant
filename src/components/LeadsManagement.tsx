@@ -4,6 +4,8 @@ import { useState, useEffect, useCallback } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import { useNotification } from '@/components/Notification'
 import { supabase } from '@/lib/supabase'
+import { useDbCache } from '@/hooks/useDataCache'
+import { useApiPerformanceMonitor } from '@/hooks/usePerformanceMonitor'
 
 interface Lead {
   id: string
@@ -22,6 +24,8 @@ interface Lead {
 export default function LeadsManagement() {
   const { user } = useAuth()
   const { showNotification } = useNotification()
+  const cache = useDbCache()
+  const performanceMonitor = useApiPerformanceMonitor()
   const [leads, setLeads] = useState<Lead[]>([])
   const [loading, setLoading] = useState(true)
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null)
@@ -49,6 +53,22 @@ export default function LeadsManagement() {
   const fetchLeads = useCallback(async () => {
     if (!user || loading) return // 防止重复请求
 
+    const cacheKey = {
+      userId: user.id,
+      statusFilter,
+      sourceFilter,
+      action: 'fetchLeads'
+    }
+
+    // 检查缓存
+    const cachedData = cache.get(cacheKey)
+    if (cachedData) {
+      console.log('📦 使用缓存的线索数据')
+      setLeads(cachedData as Lead[])
+      setLoading(false)
+      return
+    }
+
     setLoading(true)
     try {
       // 首先尝试从customer_leads表获取数据
@@ -71,7 +91,11 @@ export default function LeadsManagement() {
       let error: Error | null = null
 
       try {
-        const result = await query
+        const result = await performanceMonitor.measureAsync(
+          'customer_leads_query',
+          async () => await query,
+          { statusFilter, sourceFilter, userId: user.id }
+        )
         data = result.data
         error = result.error as Error | null
       } catch (e) {
@@ -120,7 +144,13 @@ export default function LeadsManagement() {
         throw error
       }
 
-      setLeads(data || [])
+      const finalData = data || []
+      setLeads(finalData)
+
+      // 保存到缓存
+      cache.set(cacheKey, finalData)
+      console.log('💾 线索数据已缓存')
+
     } catch (error) {
       console.error('获取线索失败:', error)
       setLeads([]) // 设置空数组，避免无限重试
@@ -128,7 +158,7 @@ export default function LeadsManagement() {
     } finally {
       setLoading(false)
     }
-  }, [user, statusFilter, sourceFilter, showNotification, loading])
+  }, [user, statusFilter, sourceFilter, showNotification, loading, cache, performanceMonitor])
 
   // 状态映射辅助函数
   const mapOldStatusToNew = (oldStatus: string): string => {
