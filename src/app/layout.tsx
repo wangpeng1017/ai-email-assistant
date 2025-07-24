@@ -4,8 +4,6 @@ import "./globals.css";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { AppQueryProvider } from "@/providers/QueryProvider";
 
-// 移除StagewiseToolbar，因为它在Server Component中不能使用ssr: false
-
 const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],
@@ -34,7 +32,6 @@ export default function RootLayout({
         <AppQueryProvider>
           <AuthProvider>
             {children}
-            {/* StagewiseToolbar已移除 */}
           </AuthProvider>
         </AppQueryProvider>
       </body>
