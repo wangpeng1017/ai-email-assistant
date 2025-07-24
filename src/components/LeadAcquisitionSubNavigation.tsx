@@ -1,41 +1,41 @@
 'use client'
 
-interface LeadsSubNavigationProps {
+interface LeadAcquisitionSubNavigationProps {
   onSubMenuChange: (subMenu: string) => void
   activeSubMenu: string
 }
 
-export default function LeadsSubNavigation({ onSubMenuChange, activeSubMenu }: LeadsSubNavigationProps) {
+export default function LeadAcquisitionSubNavigation({ onSubMenuChange, activeSubMenu }: LeadAcquisitionSubNavigationProps) {
   const subMenuItems = [
     {
-      id: 'management',
-      name: '线索管理',
+      id: 'web-scraping',
+      name: '网页爬取',
       icon: (
         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9v-9m0-9v9m0 9c-5 0-9-4-9-9s4-9 9-9" />
         </svg>
       ),
-      description: '查看、编辑和管理所有客户线索'
+      description: '从网站自动爬取客户信息'
     },
     {
-      id: 'import',
-      name: '批量导入',
+      id: 'data-extraction',
+      name: '数据抓取',
       icon: (
         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10" />
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4" />
         </svg>
       ),
-      description: '批量导入Excel或CSV文件'
+      description: '从各种数据源提取线索信息'
     },
     {
-      id: 'manual',
-      name: '手动添加',
+      id: 'lead-discovery',
+      name: '线索发现',
       icon: (
         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
         </svg>
       ),
-      description: '手动添加单个客户线索'
+      description: '智能发现和识别潜在客户'
     }
   ]
 

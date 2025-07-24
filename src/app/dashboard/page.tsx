@@ -7,12 +7,17 @@ import ProtectedRoute from '@/components/ProtectedRoute'
 import DashboardLayout from '@/components/DashboardLayout'
 import MainNavigation from '@/components/MainNavigation'
 import LeadsSubNavigation from '@/components/LeadsSubNavigation'
+import LeadAcquisitionSubNavigation from '@/components/LeadAcquisitionSubNavigation'
 import WebScrapingForm from '@/components/WebScrapingForm'
+import DataExtractionForm from '@/components/DataExtractionForm'
+import LeadDiscoveryForm from '@/components/LeadDiscoveryForm'
+import BatchImportForm from '@/components/BatchImportForm'
+import ManualAddForm from '@/components/ManualAddForm'
 import MaterialsContainer from '@/components/materials/MaterialsContainer'
 import LeadsContainer from '@/components/leads/LeadsContainer'
 import AIEmailWorkflow from '@/components/AIEmailWorkflow'
 import EmailTemplates from '@/components/EmailTemplates'
-import Analytics from '@/components/Analytics'
+
 import Settings from '@/components/Settings'
 import Notification, { useNotification } from '@/components/Notification'
 import { supabase } from '@/lib/supabase'
@@ -143,6 +148,8 @@ function DashboardContent() {
   // 渲染内容的辅助函数
   const renderContent = () => {
     switch (activeMenu) {
+      case 'lead-acquisition':
+        return renderLeadAcquisitionContent()
       case 'leads':
         return renderLeadsContent()
       case 'materials':
@@ -151,12 +158,23 @@ function DashboardContent() {
         return <AIEmailWorkflow />
       case 'templates':
         return <EmailTemplates />
-      case 'analytics':
-        return <Analytics />
       case 'settings':
         return <Settings />
       default:
-        return renderLeadsContent()
+        return renderLeadAcquisitionContent()
+    }
+  }
+
+  const renderLeadAcquisitionContent = () => {
+    switch (activeSubMenu) {
+      case 'web-scraping':
+        return <WebScrapingForm onSubmit={handleFormSubmit} />
+      case 'data-extraction':
+        return <DataExtractionForm onSubmit={handleFormSubmit} />
+      case 'lead-discovery':
+        return <LeadDiscoveryForm onSubmit={handleFormSubmit} />
+      default:
+        return <WebScrapingForm onSubmit={handleFormSubmit} />
     }
   }
 
@@ -164,8 +182,10 @@ function DashboardContent() {
     switch (activeSubMenu) {
       case 'management':
         return <LeadsContainer />
-      case 'scraping':
-        return <WebScrapingForm onSubmit={handleFormSubmit} />
+      case 'import':
+        return <BatchImportForm onClose={() => setActiveSubMenu('management')} onSubmit={handleFormSubmit} />
+      case 'manual':
+        return <ManualAddForm onSubmit={handleFormSubmit} />
       default:
         return <LeadsContainer />
     }
@@ -176,8 +196,13 @@ function DashboardContent() {
       <DashboardLayout>
         {/* 主导航 */}
         <MainNavigation activeMenu={activeMenu} onMenuChange={handleMenuChange} />
-        
-        {/* 客户线索子导航 */}
+
+        {/* 线索获取子导航 */}
+        {activeMenu === 'lead-acquisition' && (
+          <LeadAcquisitionSubNavigation activeSubMenu={activeSubMenu} onSubMenuChange={handleSubMenuChange} />
+        )}
+
+        {/* 线索管理子导航 */}
         {activeMenu === 'leads' && (
           <LeadsSubNavigation activeSubMenu={activeSubMenu} onSubMenuChange={handleSubMenuChange} />
         )}
