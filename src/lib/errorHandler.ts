@@ -147,19 +147,40 @@ export function getErrorMessage(error: unknown): string {
   return appError.message
 }
 
-export function logError(error: unknown, context?: string) {
+export function logError(error: unknown, context?: string): void
+export function logError(message: string, error: unknown, context?: unknown): void
+export function logError(errorOrMessage: unknown, contextOrError?: unknown, additionalContext?: unknown) {
   const timestamp = new Date().toISOString()
+
+  let error: unknown
+  let context: string | undefined
+  let extraContext: unknown
+
+  // 判断调用方式
+  if (typeof errorOrMessage === 'string') {
+    // 新的调用方式: logError(message, error, context)
+    context = errorOrMessage
+    error = contextOrError
+    extraContext = additionalContext
+  } else {
+    // 旧的调用方式: logError(error, context)
+    error = errorOrMessage
+    context = typeof contextOrError === 'string' ? contextOrError : undefined
+    extraContext = contextOrError
+  }
+
   const isError = error instanceof Error
   const errorObj = error as ErrorLike
 
   const errorInfo = {
     timestamp,
     context,
+    extraContext,
     error: {
-      message: isError ? error.message : String(error),
-      stack: isError ? error.stack : undefined,
+      message: isError ? (error as Error).message : String(error),
+      stack: isError ? (error as Error).stack : undefined,
       code: errorObj?.code,
-      name: isError ? error.name : 'Unknown'
+      name: isError ? (error as Error).name : 'Unknown'
     }
   }
 
