@@ -92,16 +92,20 @@ const LeadsStats: React.FC<LeadsStatsProps> = ({ stats, isLoading = false }) => 
     return <LeadsStatsSkeleton />
   }
 
-  // 计算转化率
-  const conversionRate = stats.total > 0 ? ((stats.completed / stats.total) * 100).toFixed(1) : '0'
-  
+  // 计算转化率 - 安全处理undefined值
+  const safeTotal = stats.total || 0
+  const safeCompleted = stats.completed || 0
+  const safeProcessing = stats.processing || 0
+
+  const conversionRate = safeTotal > 0 ? ((safeCompleted / safeTotal) * 100).toFixed(1) : '0'
+
   // 计算处理中的比例
-  const processingRate = stats.total > 0 ? ((stats.processing / stats.total) * 100).toFixed(1) : '0'
+  const processingRate = safeTotal > 0 ? ((safeProcessing / safeTotal) * 100).toFixed(1) : '0'
 
   const statsData = [
     {
       title: '总线索数',
-      value: stats.total,
+      value: stats.total || 0,
       icon: UsersIcon,
       color: 'blue' as const,
       trend: {
@@ -111,7 +115,7 @@ const LeadsStats: React.FC<LeadsStatsProps> = ({ stats, isLoading = false }) => 
     },
     {
       title: '待处理',
-      value: stats.pending,
+      value: stats.pending || 0,
       icon: ClockIcon,
       color: 'yellow' as const,
       trend: {
@@ -121,7 +125,7 @@ const LeadsStats: React.FC<LeadsStatsProps> = ({ stats, isLoading = false }) => 
     },
     {
       title: '处理中',
-      value: stats.processing,
+      value: stats.processing || 0,
       icon: ChartBarIcon,
       color: 'purple' as const,
       trend: {
@@ -131,7 +135,7 @@ const LeadsStats: React.FC<LeadsStatsProps> = ({ stats, isLoading = false }) => 
     },
     {
       title: '已完成',
-      value: stats.completed,
+      value: stats.completed || 0,
       icon: CheckCircleIcon,
       color: 'green' as const,
       trend: {
@@ -141,7 +145,7 @@ const LeadsStats: React.FC<LeadsStatsProps> = ({ stats, isLoading = false }) => 
     },
     {
       title: '失败/取消',
-      value: stats.failed,
+      value: stats.failed || 0,
       icon: ExclamationTriangleIcon,
       color: 'red' as const,
       trend: {
