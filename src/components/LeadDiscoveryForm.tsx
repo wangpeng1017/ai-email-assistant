@@ -81,6 +81,11 @@ export default function LeadDiscoveryForm({ onSubmit }: LeadDiscoveryFormProps) 
       setProgress(100)
       setCurrentStep('处理完成')
 
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`)
+      }
+
       const result: DiscoveryResult = await response.json()
 
       if (result.success) {
