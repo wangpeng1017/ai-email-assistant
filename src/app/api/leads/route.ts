@@ -7,9 +7,12 @@ export async function GET(request: NextRequest) {
   // 添加调试日志
   console.log('🔍 Leads API GET request received')
   console.log('Request URL:', request.url)
+
+  let userId: string | null = null
+
   try {
     const { searchParams } = new URL(request.url)
-    const userId = searchParams.get('userId')
+    userId = searchParams.get('userId')
     const status = searchParams.get('status')
     const source = searchParams.get('source')
     const search = searchParams.get('search')
@@ -147,9 +150,33 @@ export async function GET(request: NextRequest) {
     })
 
   } catch (error) {
+    console.error('❌ 线索API错误详情:', {
+      error: error,
+      message: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined,
+      userId: userId
+    })
+
     logError('获取线索列表失败', error)
+
+    // 提供更详细的错误信息
+    const errorMessage = error instanceof Error ? error.message : String(error)
+    let userFriendlyMessage = getErrorMessage(error)
+
+    // 如果是数据库相关错误，提供更具体的信息
+    if (errorMessage.includes('relation') && errorMessage.includes('does not exist')) {
+      userFriendlyMessage = '数据库表不存在，请联系管理员初始化数据库'
+    } else if (errorMessage.includes('invalid input syntax for type uuid')) {
+      userFriendlyMessage = '用户ID格式错误，请重新登录'
+    } else if (errorMessage.includes('permission denied')) {
+      userFriendlyMessage = '权限不足，请重新登录'
+    }
+
     return NextResponse.json(
-      { error: getErrorMessage(error) },
+      {
+        error: userFriendlyMessage,
+        details: process.env.NODE_ENV === 'development' ? errorMessage : undefined
+      },
       { status: 500 }
     )
   }

@@ -34,8 +34,11 @@ export function handleApiError(error: unknown): AppError {
   const isError = error instanceof Error
   const errorObj = error as ErrorLike
 
-  // 网络错误
-  if (errorObj?.code === 'NETWORK_ERROR' || (typeof navigator !== 'undefined' && !navigator.onLine)) {
+  // 网络错误 - 更精确的检查
+  if (errorObj?.code === 'NETWORK_ERROR' ||
+      errorObj?.code === 'ECONNREFUSED' ||
+      errorObj?.code === 'ENOTFOUND' ||
+      (typeof navigator !== 'undefined' && !navigator.onLine)) {
     return {
       message: '网络连接失败，请检查网络连接后重试',
       code: 'NETWORK_ERROR'
