@@ -38,14 +38,14 @@ export async function POST(request: NextRequest) {
       .from('lead_discovery_jobs')
       .insert({
         user_id: body.userId,
-        search_criteria: {
-          industry: body.industry,
-          location: body.location,
-          companySize: body.companySize,
-          keywords: body.keywords,
-          maxResults: body.maxResults || 50
-        },
-        status: 'running'
+        job_name: `AI线索发现 - ${new Date().toLocaleString('zh-CN')}`,
+        target_industry: body.industry,
+        target_location: body.location,
+        company_size: body.companySize,
+        keywords: body.keywords,
+        status: 'running',
+        progress: 0,
+        total_found: 0
       })
       .select()
       .single()
@@ -73,12 +73,18 @@ export async function POST(request: NextRequest) {
       await supabase
         .from('lead_discovery_jobs')
         .update({
-          total_discovered: discoveryResult.totalDiscovered || 0,
-          processed_leads: discoveryResult.processedLeads || 0,
+          total_found: discoveryResult.totalDiscovered || 0,
+          progress: 100,
           status: discoveryResult.success ? 'completed' : 'failed',
           error_message: discoveryResult.errors?.[0],
-          ai_analysis: aiAnalysis,
-          completed_at: new Date().toISOString()
+          results: {
+            discoveredLeads: discoveryResult.discoveredLeads || [],
+            aiAnalysis: aiAnalysis,
+            totalDiscovered: discoveryResult.totalDiscovered || 0,
+            processedLeads: discoveryResult.processedLeads || 0
+          },
+          completed_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
         })
         .eq('id', job.id)
 
@@ -97,7 +103,8 @@ export async function POST(request: NextRequest) {
         .update({
           status: 'failed',
           error_message: getErrorMessage(error),
-          completed_at: new Date().toISOString()
+          completed_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
         })
         .eq('id', job.id)
 
@@ -361,31 +368,26 @@ ${index + 1}. ${lead.company_name}
 // 保存发现的线索
 async function saveDiscoveredLeads(userId: string, leads: DiscoveredLead[], jobId: string): Promise<void> {
   try {
-    const leadsToSave: Partial<LeadRecord>[] = leads.map(lead => ({
+    const leadsToSave = leads.map(lead => ({
       user_id: userId,
       customer_name: lead.company_name,
-      customer_email: lead.customer_email,
-      customer_website: lead.customer_website,
-      contact_person: lead.contact_person,
+      company_name: lead.company_name,
+      email: lead.customer_email,
       phone: lead.phone,
-      description: lead.description,
+      website: lead.customer_website,
       source: 'ai_discovery',
-      discovery_job_id: jobId,
-      created_at: new Date().toISOString()
+      status: 'new',
+      notes: `AI发现线索 - ${lead.description || ''}\n匹配原因: ${lead.match_reasons?.join(', ') || ''}\n置信度: ${lead.discovery_confidence || 0}`,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
     }))
 
     const { error } = await supabase
-      .from('leads')
+      .from('customer_leads')
       .insert(leadsToSave)
 
     if (error) {
       throw error
-    }
-
-    // 保存线索评分
-    const leadIds = await getLeadIds(userId, jobId)
-    if (leadIds.length > 0) {
-      await saveLeadScores(userId, leads, leadIds)
     }
 
   } catch (error) {
@@ -394,46 +396,7 @@ async function saveDiscoveredLeads(userId: string, leads: DiscoveredLead[], jobI
   }
 }
 
-// 获取线索ID
-async function getLeadIds(userId: string, jobId: string): Promise<string[]> {
-  const { data, error } = await supabase
-    .from('leads')
-    .select('id')
-    .eq('user_id', userId)
-    .eq('discovery_job_id', jobId)
 
-  if (error) {
-    throw error
-  }
-
-  return data.map(lead => lead.id)
-}
-
-// 保存线索评分
-async function saveLeadScores(userId: string, leads: DiscoveredLead[], leadIds: string[]): Promise<void> {
-  const scores = leads.map((lead, index) => ({
-    lead_id: leadIds[index],
-    user_id: userId,
-    overall_score: lead.scores?.overall || 0,
-    industry_match_score: lead.scores?.industry || 0,
-    location_score: lead.scores?.location || 0,
-    company_size_score: lead.scores?.companySize || 0,
-    engagement_score: lead.scores?.keyword || 0,
-    ai_confidence: lead.discovery_confidence || 0,
-    scoring_factors: {
-      match_reasons: lead.match_reasons || [],
-      discovery_method: 'ai_analysis'
-    }
-  }))
-
-  const { error } = await supabase
-    .from('lead_scores')
-    .insert(scores)
-
-  if (error) {
-    throw error
-  }
-}
 
 // GET请求处理 - 获取发现历史
 export async function GET(request: NextRequest) {
