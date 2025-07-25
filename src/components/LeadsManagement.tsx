@@ -208,53 +208,35 @@ export default function LeadsManagement() {
 
     try {
       const leadData = {
-        user_id: user.id,
+        userId: user.id,
         customer_name: newLead.customer_name.trim(),
-        company_name: newLead.company_name.trim() || null,
-        email: newLead.email.trim() || null,
-        phone: newLead.phone.trim() || null,
-        website: newLead.website.trim() || null,
-        source: 'manual',
-        status: 'new',
-        notes: newLead.notes.trim() || null,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
+        company_name: newLead.company_name.trim() || '',
+        email: newLead.email.trim() || '',
+        phone: newLead.phone.trim() || '',
+        website: newLead.website.trim() || '',
+        notes: newLead.notes.trim() || '',
+        source: 'manual'
       }
 
-      // 首先尝试添加到customer_leads表
-      // eslint-disable-next-line prefer-const
-      let { data, error } = await supabase
-        .from('customer_leads')
-        .insert([leadData])
-        .select()
+      console.log('发送添加线索请求:', leadData)
 
-      // 如果customer_leads表不存在，回退到leads表
-      if (error && 'message' in error && error.message.includes('relation "public.customer_leads" does not exist')) {
-        console.log('customer_leads表不存在，回退到leads表')
-        const leadsData = {
-          user_id: user.id,
-          customer_name: leadData.customer_name,
-          customer_email: leadData.email,
-          customer_website: leadData.website,
-          source: 'manual',
-          status: 'pending',
-          notes: leadData.notes,
-          created_at: leadData.created_at,
-          updated_at: leadData.updated_at
-        }
+      const response = await fetch('/api/leads', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(leadData)
+      })
 
-        const { data: leadsResult, error: leadsError } = await supabase
-          .from('leads')
-          .insert([leadsData])
-          .select()
-
-        if (leadsError) throw leadsError
-        data = leadsResult
-      } else if (error) {
-        throw error
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`)
       }
 
-      if (data && data.length > 0) {
+      const result = await response.json()
+      console.log('添加线索成功:', result)
+
+      if (result.success) {
         // 重新获取线索列表
         await fetchLeads()
 
@@ -270,10 +252,13 @@ export default function LeadsManagement() {
         setShowAddForm(false)
 
         showNotification('success', '添加成功', '客户线索已成功添加')
+      } else {
+        throw new Error(result.message || '添加失败')
       }
     } catch (error) {
       console.error('添加线索失败:', error)
-      showNotification('error', '添加失败', '无法添加客户线索')
+      const errorMessage = error instanceof Error ? error.message : '无法添加客户线索'
+      showNotification('error', '添加失败', errorMessage)
     }
   }
 

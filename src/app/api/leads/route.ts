@@ -4,15 +4,12 @@ import { getErrorMessage, logError } from '@/lib/errorHandler'
 
 // 获取线索列表
 export async function GET(request: NextRequest) {
-  // 添加调试日志
   console.log('🔍 Leads API GET request received')
   console.log('Request URL:', request.url)
 
-  let userId: string | null = null
-
   try {
     const { searchParams } = new URL(request.url)
-    userId = searchParams.get('userId')
+    const userId = searchParams.get('userId')
     const status = searchParams.get('status')
     const source = searchParams.get('source')
     const search = searchParams.get('search')
@@ -38,8 +35,34 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    // 首先尝试从customer_leads表获取数据
+    // 简化的查询逻辑，先测试基本连接
+    console.log('🔍 Testing basic database connection...')
+
+    try {
+      // 最简单的查询测试
+      const { data: testData, error: testError } = await supabase
+        .from('customer_leads')
+        .select('id')
+        .eq('user_id', userId)
+        .limit(1)
+
+      if (testError) {
+        console.error('❌ Database connection test failed:', testError)
+        throw testError
+      }
+
+      console.log('✅ Database connection test passed')
+    } catch (dbError) {
+      console.error('❌ Database error:', dbError)
+      return NextResponse.json(
+        { error: 'Database connection failed', details: getErrorMessage(dbError) },
+        { status: 500 }
+      )
+    }
+
+    // 简化的查询逻辑
     console.log('🔍 Querying customer_leads table...')
+
     let query = supabase
       .from('customer_leads')
       .select('*', { count: 'exact' })
@@ -48,15 +71,19 @@ export async function GET(request: NextRequest) {
 
     // 应用过滤器
     if (status && status !== 'all') {
+      console.log('📊 Applying status filter:', status)
       query = query.eq('status', status)
     }
 
     if (source && source !== 'all') {
+      console.log('📊 Applying source filter:', source)
       query = query.eq('source', source)
     }
 
-    if (search) {
-      query = query.or(`customer_name.ilike.%${search}%,company_name.ilike.%${search}%,email.ilike.%${search}%`)
+    if (search && search.trim()) {
+      console.log('📊 Applying search filter:', search)
+      const searchTerm = search.trim()
+      query = query.or(`customer_name.ilike.%${searchTerm}%,company_name.ilike.%${searchTerm}%,email.ilike.%${searchTerm}%`)
     }
 
     // 应用分页
@@ -64,80 +91,18 @@ export async function GET(request: NextRequest) {
     const to = from + limit - 1
     query = query.range(from, to)
 
-    let data: unknown[] | null = null
-    let count: number | null = null
-    let error: Error | null = null
+    console.log('📊 Executing query with pagination:', { from, to, page, limit })
 
-    try {
-      console.log('📊 Executing customer_leads query...')
-      const result = await query
-      data = result.data
-      count = result.count
-      error = result.error as Error | null
-      console.log('✅ Query result:', { dataCount: data?.length, totalCount: count, hasError: !!error })
-    } catch (e) {
-      console.error('❌ Query execution failed:', e)
-      error = e as Error
-    }
+    const { data, count, error } = await query
 
-    // 如果customer_leads表不存在，回退到leads表
-    if (error && 'message' in error && error.message.includes('relation "public.customer_leads" does not exist')) {
-      console.log('customer_leads表不存在，回退到leads表')
-      
-      let leadsQuery = supabase
-        .from('leads')
-        .select('*', { count: 'exact' })
-        .eq('user_id', userId)
-        .order('created_at', { ascending: false })
-
-      // 应用过滤器（需要映射状态）
-      if (status && status !== 'all') {
-        const mappedStatus = mapNewStatusToOld(status)
-        leadsQuery = leadsQuery.eq('status', mappedStatus)
-      }
-
-      if (source && source !== 'all') {
-        const mappedSource = mapNewSourceToOld(source)
-        leadsQuery = leadsQuery.eq('source', mappedSource)
-      }
-
-      if (search) {
-        leadsQuery = leadsQuery.or(`customer_name.ilike.%${search}%,customer_website.ilike.%${search}%,customer_email.ilike.%${search}%`)
-      }
-
-      // 应用分页
-      leadsQuery = leadsQuery.range(from, to)
-
-      const { data: leadsData, error: leadsError, count: leadsCount } = await leadsQuery
-
-      if (leadsError) throw leadsError
-
-      // 映射leads表数据到新格式
-      data = leadsData?.map(lead => ({
-        id: lead.id,
-        user_id: lead.user_id,
-        customer_name: lead.customer_name || 'Unknown',
-        company_name: lead.customer_website || '',
-        email: lead.customer_email || '',
-        phone: lead.phone || '',
-        website: lead.customer_website || '',
-        source: mapOldSourceToNew(lead.source),
-        status: mapOldStatusToNew(lead.status),
-        notes: lead.notes || '',
-        industry: '',
-        company_size: '',
-        created_at: lead.created_at,
-        updated_at: lead.updated_at || lead.created_at
-      })) || []
-      
-      count = leadsCount
-    } else if (error) {
+    if (error) {
+      console.error('❌ Query failed:', error)
       throw error
     }
 
-    // 计算分页信息
-    const totalPages = Math.ceil((count || 0) / limit)
+    console.log('✅ Query successful:', { dataCount: data?.length, totalCount: count })
 
+    // 直接返回结果
     return NextResponse.json({
       success: true,
       data: data || [],
@@ -145,7 +110,7 @@ export async function GET(request: NextRequest) {
         page,
         limit,
         total: count || 0,
-        totalPages
+        totalPages: Math.ceil((count || 0) / limit)
       }
     })
 
@@ -153,8 +118,7 @@ export async function GET(request: NextRequest) {
     console.error('❌ 线索API错误详情:', {
       error: error,
       message: error instanceof Error ? error.message : String(error),
-      stack: error instanceof Error ? error.stack : undefined,
-      userId: userId
+      stack: error instanceof Error ? error.stack : undefined
     })
 
     logError('获取线索列表失败', error)
