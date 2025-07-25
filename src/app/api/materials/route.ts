@@ -4,16 +4,30 @@ import { supabase } from '@/lib/supabase'
 // 获取产品资料列表
 export async function GET(request: NextRequest) {
   try {
+    console.log('🔍 Materials API GET request received')
     const { searchParams } = new URL(request.url)
     const userId = searchParams.get('userId')
 
+    console.log('📊 Query parameters:', { userId })
+
+    // 健康检查端点
+    if (searchParams.get('health') === 'check') {
+      return NextResponse.json({
+        status: 'ok',
+        timestamp: new Date().toISOString(),
+        message: 'Materials API is working'
+      })
+    }
+
     if (!userId) {
+      console.log('❌ Missing userId parameter')
       return NextResponse.json(
         { error: '缺少用户ID' },
         { status: 400 }
       )
     }
 
+    console.log('🔍 Querying product_materials table...')
     const { data, error } = await supabase
       .from('product_materials')
       .select('*')
@@ -21,14 +35,36 @@ export async function GET(request: NextRequest) {
       .order('created_at', { ascending: false })
 
     if (error) {
-      console.error('获取产品资料失败:', error)
+      console.error('❌ 获取产品资料失败:', error)
+      console.error('Error details:', {
+        message: error.message,
+        details: error.details,
+        hint: error.hint,
+        code: error.code
+      })
+
+      // 检查是否是表不存在的错误
+      if (error.message.includes('relation') && error.message.includes('does not exist')) {
+        return NextResponse.json(
+          {
+            error: '数据库表不存在，请联系管理员初始化数据库',
+            details: error.message
+          },
+          { status: 500 }
+        )
+      }
+
       return NextResponse.json(
-        { error: '获取产品资料失败' },
+        {
+          error: '获取产品资料失败',
+          details: error.message
+        },
         { status: 500 }
       )
     }
 
-    return NextResponse.json({ materials: data })
+    console.log('✅ Successfully retrieved materials:', data?.length || 0, 'items')
+    return NextResponse.json({ materials: data || [] })
   } catch (error) {
     console.error('API错误:', error)
     return NextResponse.json(

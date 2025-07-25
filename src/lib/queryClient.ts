@@ -216,13 +216,13 @@ async function fetchMaterialsData(userId: string, filters?: Record<string, unkno
       Object.entries(filters || {}).map(([key, value]) => [key, String(value)])
     )
   })
-  
-  const response = await fetch(`/api/materials/upload?${params}`)
-  
+
+  const response = await fetch(`/api/materials?${params}`)
+
   if (!response.ok) {
     throw new Error(`HTTP ${response.status}: ${response.statusText}`)
   }
-  
+
   return response.json()
 }
 

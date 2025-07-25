@@ -2,6 +2,8 @@
 
 import React, { useState, useRef } from 'react'
 import { XMarkIcon, CloudArrowUpIcon } from '@heroicons/react/24/outline'
+import { useAuth } from '@/contexts/AuthContext'
+import { useBatchUploadMaterialsMutation } from '@/hooks/useMaterialsQuery'
 
 interface UploadModalProps {
   isOpen: boolean
@@ -9,10 +11,12 @@ interface UploadModalProps {
 }
 
 const UploadModal: React.FC<UploadModalProps> = ({ isOpen, onClose }) => {
+  const { user } = useAuth()
   const [selectedFiles, setSelectedFiles] = useState<FileList | null>(null)
   const [dragOver, setDragOver] = useState(false)
   const [description, setDescription] = useState('')
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const batchUploadMutation = useBatchUploadMaterialsMutation()
 
   const handleFileSelect = (files: FileList) => {
     setSelectedFiles(files)
@@ -45,11 +49,22 @@ const UploadModal: React.FC<UploadModalProps> = ({ isOpen, onClose }) => {
     }
   }
 
-  const handleSubmit = () => {
-    if (selectedFiles) {
-      // TODO: 实现文件上传逻辑
-      console.log('上传文件:', selectedFiles, '描述:', description)
-      onClose()
+  const handleSubmit = async () => {
+    if (!selectedFiles || !user) {
+      return
+    }
+
+    try {
+      await batchUploadMutation.mutateAsync({
+        files: selectedFiles,
+        userId: user.id
+      })
+
+      // 上传成功后关闭模态框
+      handleClose()
+    } catch (error) {
+      console.error('上传失败:', error)
+      // 错误处理已在mutation中处理，这里不需要额外处理
     }
   }
 
@@ -167,10 +182,10 @@ const UploadModal: React.FC<UploadModalProps> = ({ isOpen, onClose }) => {
               </button>
               <button
                 onClick={handleSubmit}
-                disabled={!selectedFiles || selectedFiles.length === 0}
+                disabled={!selectedFiles || selectedFiles.length === 0 || batchUploadMutation.isPending}
                 className="px-4 py-2 border border-transparent rounded-md text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                开始上传
+                {batchUploadMutation.isPending ? '上传中...' : '开始上传'}
               </button>
             </div>
           </div>
