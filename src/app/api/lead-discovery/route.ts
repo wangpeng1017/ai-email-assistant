@@ -55,34 +55,53 @@ export async function POST(request: NextRequest) {
     }
 
     try {
+      console.log('开始执行线索发现，参数:', {
+        userId: body.userId,
+        industry: body.industry,
+        location: body.location,
+        keywords: body.keywords
+      })
+
       // 执行线索发现
       const discoveryResult = await performLeadDiscovery(body)
-      
+      console.log('线索发现结果:', {
+        success: discoveryResult.success,
+        totalDiscovered: discoveryResult.totalDiscovered,
+        leadsCount: discoveryResult.discoveredLeads?.length
+      })
+
       // 如果需要AI分析
       let aiAnalysis = null
       if (body.includeAnalysis !== false && discoveryResult.success) {
+        console.log('开始AI分析')
         aiAnalysis = await performAIAnalysis(body, discoveryResult.discoveredLeads || [])
+        console.log('AI分析完成:', { hasAnalysis: !!aiAnalysis })
       }
 
       // 保存发现的线索
       if (discoveryResult.success && discoveryResult.discoveredLeads) {
+        console.log('开始保存线索，数量:', discoveryResult.discoveredLeads.length)
         await saveDiscoveredLeads(body.userId, discoveryResult.discoveredLeads)
+        console.log('线索保存完成')
       }
 
-      // 更新任务状态
+      // 更新任务状态 - 简化results结构避免JSONB序列化问题
+      const resultsData = {
+        totalDiscovered: discoveryResult.totalDiscovered || 0,
+        processedLeads: discoveryResult.processedLeads || 0,
+        leadsCount: discoveryResult.discoveredLeads?.length || 0,
+        hasAiAnalysis: !!aiAnalysis,
+        aiSummary: aiAnalysis?.summary || null
+      }
+
       await supabase
         .from('lead_discovery_jobs')
         .update({
           total_found: discoveryResult.totalDiscovered || 0,
           progress: 100,
           status: discoveryResult.success ? 'completed' : 'failed',
-          error_message: discoveryResult.errors?.[0],
-          results: {
-            discoveredLeads: discoveryResult.discoveredLeads || [],
-            aiAnalysis: aiAnalysis,
-            totalDiscovered: discoveryResult.totalDiscovered || 0,
-            processedLeads: discoveryResult.processedLeads || 0
-          },
+          error_message: discoveryResult.errors?.[0] || null,
+          results: resultsData,
           completed_at: new Date().toISOString(),
           updated_at: new Date().toISOString()
         })
@@ -97,16 +116,23 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(response)
 
     } catch (error) {
+      console.error('线索发现过程中发生错误:', error)
+      logError('线索发现失败', error)
+
       // 更新任务状态为失败
-      await supabase
-        .from('lead_discovery_jobs')
-        .update({
-          status: 'failed',
-          error_message: getErrorMessage(error),
-          completed_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', job.id)
+      try {
+        await supabase
+          .from('lead_discovery_jobs')
+          .update({
+            status: 'failed',
+            error_message: getErrorMessage(error),
+            completed_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', job.id)
+      } catch (updateError) {
+        console.error('更新任务状态失败:', updateError)
+      }
 
       throw error
     }
@@ -278,11 +304,11 @@ function calculateKeywordScore(lead: DiscoveredLead, criteria: LeadDiscoveryRequ
   if (!criteria.keywords) return 0.8 // 默认分数
 
   const keywords = criteria.keywords.split(',').map(k => k.trim().toLowerCase())
-  const leadText = `${lead.company_name} ${lead.description} ${lead.industry}`.toLowerCase()
+  const leadText = `${lead.company_name || ''} ${lead.description || ''} ${lead.industry || ''}`.toLowerCase()
 
   const matchedKeywords = keywords.filter(keyword => leadText.includes(keyword))
 
-  return matchedKeywords.length / keywords.length
+  return keywords.length > 0 ? matchedKeywords.length / keywords.length : 0.8
 }
 
 // 执行AI分析
