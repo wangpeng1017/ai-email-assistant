@@ -58,12 +58,15 @@ const StatCard: React.FC<StatCardProps> = ({ title, value, icon: Icon, color, tr
 
   const classes = colorClasses[color]
 
+  // 安全地处理value，确保它是一个有效的数字
+  const safeValue = typeof value === 'number' && !isNaN(value) ? value : 0
+
   return (
     <div className="bg-white rounded-lg border p-6 hover:shadow-md transition-shadow">
       <div className="flex items-center justify-between">
         <div className="flex-1">
           <p className="text-sm font-medium text-gray-600 mb-1">{title}</p>
-          <p className="text-2xl font-bold text-gray-900">{value.toLocaleString()}</p>
+          <p className="text-2xl font-bold text-gray-900">{safeValue.toLocaleString()}</p>
           
           {trend && (
             <div className="flex items-center mt-2">
