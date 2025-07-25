@@ -76,7 +76,7 @@ function DashboardContent() {
   }
 
   const fetchStats = useCallback(async () => {
-    if (!user) return
+    if (!user?.id) return
 
     try {
       // 首先尝试从customer_leads表获取数据
@@ -126,9 +126,9 @@ function DashboardContent() {
       setStats(stats)
     } catch (error) {
       logError(error, 'fetchStats')
-      showError('获取统计失败', getErrorMessage(error))
+      console.error('获取统计失败:', getErrorMessage(error))
     }
-  }, [user, showError])
+  }, [user?.id])
 
   // 映射旧状态到新状态的辅助函数
   const mapOldStatusToNew = (oldStatus: string): string => {
@@ -141,9 +141,12 @@ function DashboardContent() {
     }
   }
 
+  // 防止无限循环：只在用户ID或refreshKey变化时重新获取统计数据
   useEffect(() => {
-    fetchStats()
-  }, [fetchStats, refreshKey])
+    if (user?.id) {
+      fetchStats()
+    }
+  }, [user?.id, refreshKey, fetchStats])
 
   // 渲染内容的辅助函数
   const renderContent = () => {
