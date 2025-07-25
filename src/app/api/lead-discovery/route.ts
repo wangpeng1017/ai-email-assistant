@@ -66,7 +66,7 @@ export async function POST(request: NextRequest) {
 
       // 保存发现的线索
       if (discoveryResult.success && discoveryResult.discoveredLeads) {
-        await saveDiscoveredLeads(body.userId, discoveryResult.discoveredLeads, job.id)
+        await saveDiscoveredLeads(body.userId, discoveryResult.discoveredLeads)
       }
 
       // 更新任务状态
@@ -366,15 +366,16 @@ ${index + 1}. ${lead.company_name}
 }
 
 // 保存发现的线索
-async function saveDiscoveredLeads(userId: string, leads: DiscoveredLead[], jobId: string): Promise<void> {
+async function saveDiscoveredLeads(userId: string, leads: DiscoveredLead[]): Promise<void> {
   try {
     const leadsToSave = leads.map(lead => ({
       user_id: userId,
-      customer_name: lead.company_name,
       company_name: lead.company_name,
+      contact_name: lead.contact_person,
       email: lead.customer_email,
       phone: lead.phone,
       website: lead.customer_website,
+      industry: lead.industry,
       source: 'ai_discovery',
       status: 'new',
       notes: `AI发现线索 - ${lead.description || ''}\n匹配原因: ${lead.match_reasons?.join(', ') || ''}\n置信度: ${lead.discovery_confidence || 0}`,
