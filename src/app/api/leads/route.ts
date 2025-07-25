@@ -40,7 +40,7 @@ export async function GET(request: NextRequest) {
 
     try {
       // 最简单的查询测试
-      const { data: testData, error: testError } = await supabase
+      const { error: testError } = await supabase
         .from('customer_leads')
         .select('id')
         .eq('user_id', userId)
@@ -227,7 +227,7 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// 状态映射函数
+// 映射函数用于回退兼容性
 function mapNewStatusToOld(newStatus: string): string {
   const statusMap: Record<string, string> = {
     'new': 'pending',
@@ -239,16 +239,6 @@ function mapNewStatusToOld(newStatus: string): string {
   return statusMap[newStatus] || 'pending'
 }
 
-function mapOldStatusToNew(oldStatus: string): string {
-  const statusMap: Record<string, string> = {
-    'pending': 'new',
-    'processing': 'contacted',
-    'completed': 'qualified',
-    'failed': 'lost'
-  }
-  return statusMap[oldStatus] || 'new'
-}
-
 function mapNewSourceToOld(newSource: string): string {
   const sourceMap: Record<string, string> = {
     'manual': 'manual',
@@ -257,13 +247,4 @@ function mapNewSourceToOld(newSource: string): string {
     'ai_discovery': 'scraped'
   }
   return sourceMap[newSource] || 'manual'
-}
-
-function mapOldSourceToNew(oldSource: string): string {
-  const sourceMap: Record<string, string> = {
-    'manual': 'manual',
-    'excel': 'excel_import',
-    'scraped': 'scraped'
-  }
-  return sourceMap[oldSource] || 'manual'
 }
