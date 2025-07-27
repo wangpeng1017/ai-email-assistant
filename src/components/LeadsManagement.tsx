@@ -49,116 +49,56 @@ export default function LeadsManagement() {
   const [importFile, setImportFile] = useState<File | null>(null)
   const [importing, setImporting] = useState(false)
 
-  // 获取线索列表
+  // 获取线索列表 - 使用API而不是直接数据库查询
   const fetchLeads = useCallback(async () => {
     if (!user || loading) return // 防止重复请求
 
-    const cacheKey = {
-      userId: user.id,
-      statusFilter,
-      sourceFilter,
-      action: 'fetchLeads'
-    }
-
-    // 检查缓存
-    const cachedData = cache.get(cacheKey)
-    if (cachedData) {
-      console.log('📦 使用缓存的线索数据')
-      setLeads(cachedData as Lead[])
-      setLoading(false)
-      return
-    }
-
     setLoading(true)
     try {
-      // 首先尝试从customer_leads表获取数据
-      let query = supabase
-        .from('customer_leads')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false })
+      console.log('📊 获取线索列表，参数:', {
+        userId: user.id,
+        status: statusFilter,
+        source: sourceFilter
+      })
 
-      // 应用过滤器
-      if (statusFilter !== 'all') {
-        query = query.eq('status', statusFilter)
+      const params = new URLSearchParams({
+        userId: user.id,
+        status: statusFilter,
+        source: sourceFilter,
+        search: '',
+        page: '1',
+        limit: '100'
+      })
+
+      const response = await fetch(`/api/leads?${params}`)
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`)
       }
 
-      if (sourceFilter !== 'all') {
-        query = query.eq('source', sourceFilter)
+      const result = await response.json()
+      console.log('✅ API响应成功:', {
+        success: result.success,
+        dataCount: result.data?.length,
+        total: result.pagination?.total
+      })
+
+      if (result.success) {
+        setLeads(result.data || [])
+      } else {
+        throw new Error(result.error || '获取线索失败')
       }
-
-      let data: Lead[] | null = null
-      let error: Error | null = null
-
-      try {
-        const result = await performanceMonitor.measureAsync(
-          'customer_leads_query',
-          async () => await query,
-          { statusFilter, sourceFilter, userId: user.id }
-        )
-        data = result.data
-        error = result.error as Error | null
-      } catch (e) {
-        error = e as Error
-      }
-
-      // 如果customer_leads表不存在，回退到leads表（只尝试一次）
-      if (error && 'message' in error && error.message.includes('relation "public.customer_leads" does not exist')) {
-        console.log('customer_leads表不存在，回退到leads表')
-        let leadsQuery = supabase
-          .from('leads')
-          .select('*')
-          .eq('user_id', user.id)
-          .order('created_at', { ascending: false })
-
-        // 应用过滤器（需要映射状态）
-        if (statusFilter !== 'all') {
-          const mappedStatus = mapNewStatusToOld(statusFilter)
-          leadsQuery = leadsQuery.eq('status', mappedStatus)
-        }
-
-        if (sourceFilter !== 'all') {
-          const mappedSource = mapNewSourceToOld(sourceFilter)
-          leadsQuery = leadsQuery.eq('source', mappedSource)
-        }
-
-        const { data: leadsData, error: leadsError } = await leadsQuery
-
-        if (leadsError) throw leadsError
-
-        // 映射leads表数据到新格式
-        data = leadsData?.map(lead => ({
-          id: lead.id,
-          customer_name: lead.customer_name || 'Unknown',
-          customer_email: lead.customer_email || '',
-          customer_website: lead.customer_website || '',
-          source: mapOldSourceToNew(lead.source),
-          status: mapOldStatusToNew(lead.status),
-          created_at: lead.created_at,
-          updated_at: lead.updated_at || lead.created_at,
-          notes: lead.notes || '',
-          last_contact: lead.last_contact,
-          next_follow_up: lead.next_follow_up
-        })) || []
-      } else if (error) {
-        throw error
-      }
-
-      const finalData = data || []
-      setLeads(finalData)
-
-      // 保存到缓存
-      cache.set(cacheKey, finalData)
-      console.log('💾 线索数据已缓存')
 
     } catch (error) {
       console.error('获取线索失败:', error)
       setLeads([]) // 设置空数组，避免无限重试
-      showNotification('error', '加载失败', '无法获取客户线索列表')
+      const errorMessage = error instanceof Error ? error.message : '无法获取客户线索列表'
+      showNotification('error', '加载失败', errorMessage)
     } finally {
       setLoading(false)
     }
-  }, [user, statusFilter, sourceFilter, showNotification, loading, cache, performanceMonitor])
+  }, [user, statusFilter, sourceFilter, showNotification, loading])
 
   // 状态映射辅助函数
   const mapOldStatusToNew = (oldStatus: string): string => {
