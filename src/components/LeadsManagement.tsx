@@ -4,8 +4,6 @@ import { useState, useEffect, useCallback } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import { useNotification } from '@/components/Notification'
 import { supabase } from '@/lib/supabase'
-import { useDbCache } from '@/hooks/useDataCache'
-import { useApiPerformanceMonitor } from '@/hooks/usePerformanceMonitor'
 
 interface Lead {
   id: string
@@ -24,8 +22,6 @@ interface Lead {
 export default function LeadsManagement() {
   const { user } = useAuth()
   const { showNotification } = useNotification()
-  const cache = useDbCache()
-  const performanceMonitor = useApiPerformanceMonitor()
   const [leads, setLeads] = useState<Lead[]>([])
   const [loading, setLoading] = useState(true)
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null)
@@ -101,43 +97,7 @@ export default function LeadsManagement() {
   }, [user, statusFilter, sourceFilter, showNotification, loading])
 
   // 状态映射辅助函数
-  const mapOldStatusToNew = (oldStatus: string): string => {
-    switch (oldStatus) {
-      case 'pending': return 'new'
-      case 'processing': return 'contacted'
-      case 'completed': return 'converted'
-      case 'failed': return 'lost'
-      default: return 'new'
-    }
-  }
 
-  const mapNewStatusToOld = (newStatus: string): string => {
-    switch (newStatus) {
-      case 'new': return 'pending'
-      case 'contacted': return 'processing'
-      case 'converted': return 'completed'
-      case 'lost': return 'failed'
-      default: return 'pending'
-    }
-  }
-
-  const mapOldSourceToNew = (oldSource: string): string => {
-    switch (oldSource) {
-      case 'excel': return 'excel_import'
-      case 'manual': return 'manual'
-      case 'scraped': return 'scraped'
-      default: return 'manual'
-    }
-  }
-
-  const mapNewSourceToOld = (newSource: string): string => {
-    switch (newSource) {
-      case 'excel_import': return 'excel'
-      case 'manual': return 'manual'
-      case 'scraped': return 'scraped'
-      default: return 'manual'
-    }
-  }
 
   // 手动添加线索
   const addLead = async () => {
