@@ -9,32 +9,34 @@ interface MaterialsHeaderProps {
 
 const MaterialsHeader: React.FC<MaterialsHeaderProps> = ({ onUpload }) => {
   return (
-    <div className="flex justify-between items-center">
-      <div>
+    <div className="space-y-6">
+      {/* 页面标题 */}
+      <div className="border-b border-gray-200 pb-4">
         <h1 className="text-2xl font-bold text-gray-900">产品资料管理</h1>
-        <p className="text-gray-600 mt-1">
-          管理和组织您的产品资料文件，支持多种格式上传和智能分类
-        </p>
+        <p className="mt-2 text-sm text-gray-600">管理和组织您的产品资料文件</p>
       </div>
-      
-      <div className="flex space-x-3">
-        <button
-          onClick={onUpload}
-          className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-        >
-          <CloudArrowUpIcon className="w-4 h-4 mr-2" />
-          上传文件
-        </button>
-        
-        <button
-          onClick={() => {
-            // TODO: 实现批量操作
-          }}
-          className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-        >
-          <DocumentDuplicateIcon className="w-4 h-4 mr-2" />
-          批量操作
-        </button>
+
+      {/* 操作按钮 */}
+      <div className="flex justify-between items-center">
+        <div className="flex flex-wrap gap-3">
+          <button
+            onClick={onUpload}
+            className="inline-flex items-center px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200 shadow-sm"
+          >
+            <CloudArrowUpIcon className="w-4 h-4 mr-2" />
+            上传文件
+          </button>
+
+          <button
+            onClick={() => {
+              // TODO: 实现批量操作
+            }}
+            className="inline-flex items-center px-4 py-2 bg-gray-600 text-white text-sm font-medium rounded-lg hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 transition-colors duration-200 shadow-sm"
+          >
+            <DocumentDuplicateIcon className="w-4 h-4 mr-2" />
+            批量操作
+          </button>
+        </div>
       </div>
     </div>
   )

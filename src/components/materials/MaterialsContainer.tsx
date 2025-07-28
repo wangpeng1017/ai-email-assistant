@@ -5,7 +5,6 @@ import { useAuth } from '@/contexts/AuthContext'
 import { useMaterialsQuery, useBatchUploadMaterialsMutation } from '@/hooks/useMaterialsQuery'
 import { useNotification } from '@/components/Notification'
 import MaterialsHeader from './MaterialsHeader'
-import MaterialsStats from './MaterialsStats'
 import MaterialsFilters from './MaterialsFilters'
 import MaterialsGrid from './MaterialsGrid'
 import MaterialsPagination from './MaterialsPagination'
@@ -78,16 +77,14 @@ const MaterialsContainer: React.FC = () => {
   return (
     <div className="space-y-6">
       <MaterialsHeader onUpload={() => setShowUploadModal(true)} />
-      
-      <MaterialsStats />
-      
-      <div className="bg-white rounded-lg shadow">
+
+      <div className="bg-white rounded-lg shadow border border-gray-200">
         <MaterialsFilters />
-        
-        <MaterialsGrid 
+
+        <MaterialsGrid
           materials={materials?.data || []}
         />
-        
+
         <MaterialsPagination />
       </div>
 

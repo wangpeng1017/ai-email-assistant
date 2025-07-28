@@ -378,120 +378,113 @@ export default function LeadsManagement() {
 
   return (
     <div className="space-y-6">
-      {/* 页面标题和统计 */}
+      {/* 页面标题 */}
       <div className="border-b border-gray-200 pb-4">
         <h1 className="text-2xl font-bold text-gray-900">客户线索管理</h1>
-        <div className="mt-4 grid grid-cols-1 md:grid-cols-4 gap-4">
-          <div className="bg-blue-50 rounded-lg p-4">
-            <div className="text-2xl font-bold text-blue-600">{leads.length}</div>
-            <div className="text-sm text-blue-600">总线索数</div>
-          </div>
-          <div className="bg-green-50 rounded-lg p-4">
-            <div className="text-2xl font-bold text-green-600">
-              {leads.filter(l => l.status === 'qualified').length}
-            </div>
-            <div className="text-sm text-green-600">已验证</div>
-          </div>
-          <div className="bg-yellow-50 rounded-lg p-4">
-            <div className="text-2xl font-bold text-yellow-600">
-              {leads.filter(l => l.status === 'contacted').length}
-            </div>
-            <div className="text-sm text-yellow-600">已联系</div>
-          </div>
-          <div className="bg-purple-50 rounded-lg p-4">
-            <div className="text-2xl font-bold text-purple-600">
-              {leads.filter(l => l.status === 'converted').length}
-            </div>
-            <div className="text-sm text-purple-600">已转化</div>
-          </div>
-        </div>
+        <p className="mt-2 text-sm text-gray-600">管理和跟踪您的客户线索</p>
       </div>
 
       {/* 操作按钮 */}
-      <div className="flex flex-wrap gap-4">
-        <button
-          onClick={() => setShowAddForm(true)}
-          className="inline-flex items-center px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200"
-        >
-          <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-          </svg>
-          手动添加线索
-        </button>
+      <div className="flex justify-between items-center">
+        <div className="flex flex-wrap gap-3">
+          <button
+            onClick={() => setShowAddForm(true)}
+            className="inline-flex items-center px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200 shadow-sm"
+          >
+            <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+            </svg>
+            手动添加
+          </button>
 
-        <button
-          onClick={() => setShowImportModal(true)}
-          className="inline-flex items-center px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-colors duration-200"
-        >
-          <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-          </svg>
-          批量导入
-        </button>
+          <button
+            onClick={() => setShowImportModal(true)}
+            className="inline-flex items-center px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-colors duration-200 shadow-sm"
+          >
+            <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+            </svg>
+            批量导入
+          </button>
+        </div>
+
+        <div className="text-sm text-gray-500">
+          共 {filteredLeads.length} 条线索
+        </div>
       </div>
 
-      {/* 搜索和过滤 */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div>
-            <label htmlFor="search" className="block text-sm font-medium text-gray-700 mb-2">
-              搜索线索
-            </label>
-            <input
-              type="text"
-              id="search"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="搜索公司名称、邮箱或网站..."
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-            />
-          </div>
-          
-          <div>
-            <label htmlFor="status-filter" className="block text-sm font-medium text-gray-700 mb-2">
-              状态筛选
-            </label>
-            <select
-              id="status-filter"
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-            >
-              <option value="all">全部状态</option>
-              <option value="new">新线索</option>
-              <option value="contacted">已联系</option>
-              <option value="qualified">已验证</option>
-              <option value="converted">已转化</option>
-              <option value="lost">已流失</option>
-            </select>
-          </div>
-          
-          <div>
-            <label htmlFor="source-filter" className="block text-sm font-medium text-gray-700 mb-2">
-              来源筛选
-            </label>
-            <select
-              id="source-filter"
-              value={sourceFilter}
-              onChange={(e) => setSourceFilter(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-            >
-              <option value="all">全部来源</option>
-              <option value="manual">手动添加</option>
-              <option value="excel_import">Excel导入</option>
-              <option value="scraped">网页爬取</option>
-            </select>
+      {/* 搜索和筛选 */}
+      <div className="bg-white rounded-lg shadow border border-gray-200">
+        <div className="p-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <label htmlFor="search" className="block text-sm font-medium text-gray-700 mb-2">
+                搜索线索
+              </label>
+              <div className="relative">
+                <input
+                  type="text"
+                  id="search"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  placeholder="搜索公司名称、邮箱或网站..."
+                  className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                />
+                <svg className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+              </div>
+            </div>
+
+            <div>
+              <label htmlFor="status-filter" className="block text-sm font-medium text-gray-700 mb-2">
+                状态筛选
+              </label>
+              <select
+                id="status-filter"
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              >
+                <option value="all">全部状态</option>
+                <option value="new">新线索</option>
+                <option value="contacted">已联系</option>
+                <option value="qualified">已验证</option>
+                <option value="converted">已转化</option>
+                <option value="lost">已流失</option>
+              </select>
+            </div>
+
+            <div>
+              <label htmlFor="source-filter" className="block text-sm font-medium text-gray-700 mb-2">
+                来源筛选
+              </label>
+              <select
+                id="source-filter"
+                value={sourceFilter}
+                onChange={(e) => setSourceFilter(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              >
+                <option value="all">全部来源</option>
+                <option value="manual">手动添加</option>
+                <option value="excel_import">Excel导入</option>
+                <option value="scraped">网页爬取</option>
+              </select>
+            </div>
           </div>
         </div>
       </div>
 
       {/* 线索列表 */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+      <div className="bg-white rounded-lg shadow border border-gray-200">
         <div className="p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-medium text-gray-900">
-              线索列表 ({filteredLeads.length} 条)
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-lg font-semibold text-gray-900">
+              线索列表
             </h2>
+            <span className="text-sm text-gray-500">
+              {filteredLeads.length} 条记录
+            </span>
           </div>
           
           {filteredLeads.length === 0 ? (

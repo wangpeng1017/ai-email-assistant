@@ -24,30 +24,34 @@ const MaterialsFilters: React.FC = () => {
   }
 
   return (
-    <div className="p-6 border-b border-gray-200">
-      <div className="flex flex-col sm:flex-row gap-4">
+    <div className="p-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {/* 搜索框 */}
-        <div className="flex-1">
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            搜索文件
+          </label>
           <div className="relative">
-            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <MagnifyingGlassIcon className="h-5 w-5 text-gray-400" />
-            </div>
             <input
               type="text"
               placeholder="搜索文件名、描述..."
               value={searchInput}
               onChange={(e) => setSearchInput(e.target.value)}
-              className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+              className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             />
+            <MagnifyingGlassIcon className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
           </div>
         </div>
 
         {/* 文件类型过滤 */}
-        <div className="sm:w-48">
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            文件类型
+          </label>
           <select
             value={filters.type}
             onChange={(e) => handleFilterChange('type', e.target.value)}
-            className="block w-full px-3 py-2 border border-gray-300 rounded-md bg-white focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
           >
             <option value="all">所有类型</option>
             <option value="pdf">PDF文档</option>
@@ -58,18 +62,21 @@ const MaterialsFilters: React.FC = () => {
           </select>
         </div>
 
-        {/* 排序方式 - 暂时移除，因为appStore中没有sortBy字段 */}
-
-        {/* 高级过滤按钮 */}
-        <button
-          onClick={() => {
-            // TODO: 实现高级过滤
-          }}
-          className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-        >
-          <FunnelIcon className="w-4 h-4 mr-2" />
-          高级过滤
-        </button>
+        {/* 操作按钮 */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            操作
+          </label>
+          <button
+            onClick={() => {
+              // TODO: 实现高级过滤
+            }}
+            className="w-full inline-flex items-center justify-center px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+          >
+            <FunnelIcon className="w-4 h-4 mr-2" />
+            高级过滤
+          </button>
+        </div>
       </div>
 
       {/* 活动过滤器显示 */}
