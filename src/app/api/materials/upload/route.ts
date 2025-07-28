@@ -129,15 +129,38 @@ export async function POST(request: NextRequest) {
 
     // 保存文件信息到数据库
     console.log('开始保存文件信息到数据库')
-    const insertData = {
+
+    // 基本数据（兼容旧表结构）
+    const insertData: Record<string, unknown> = {
       user_id: userId,
       file_name: file.name,
       storage_path: filePath,
-      file_type: file.type,
-      file_size: file.size,
-      description: description || null
+      file_type: file.type
     }
-    console.log('插入数据:', insertData)
+
+    // 尝试添加新字段（如果表结构支持）
+    try {
+      // 先检查表结构是否支持新字段
+      const { data: tableInfo } = await supabase
+        .from('information_schema.columns')
+        .select('column_name')
+        .eq('table_name', 'product_materials')
+
+      const columnNames = tableInfo?.map(col => col.column_name) || []
+
+      if (columnNames.includes('file_size')) {
+        insertData.file_size = file.size
+      }
+
+      if (columnNames.includes('description')) {
+        insertData.description = description || null
+      }
+
+      console.log('插入数据:', insertData)
+      console.log('支持的列:', columnNames)
+    } catch (schemaError) {
+      console.log('无法检查表结构，使用基本字段:', schemaError)
+    }
 
     const { data, error: dbError } = await supabase
       .from('product_materials')

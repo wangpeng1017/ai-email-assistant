@@ -233,9 +233,6 @@ export default function AIEmailWorkflow() {
                     <p className="text-sm text-gray-500">{step.description}</p>
                   </div>
                 </div>
-                {stepIdx !== steps.length - 1 && (
-                  <div className="absolute top-4 left-4 -ml-px mt-0.5 h-full w-0.5 bg-gray-300" aria-hidden="true" />
-                )}
               </li>
             ))}
           </ol>
