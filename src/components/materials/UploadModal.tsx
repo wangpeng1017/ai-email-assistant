@@ -126,7 +126,7 @@ export default function UploadModal({ isOpen, onClose, onUpload, onError }: Uplo
         alert(`上传失败: ${errorMessage}`)
       }
     }
-  }, [selectedFiles, onUpload, handleClose])
+  }, [selectedFiles, onUpload, handleClose, onError])
 
   // 移除文件
   const handleRemoveFiles = useCallback(() => {
