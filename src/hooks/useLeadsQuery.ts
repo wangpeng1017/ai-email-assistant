@@ -252,7 +252,6 @@ export function useImportLeadsMutation(userId: string) {
 // 组合Hook - 提供完整的线索管理功能
 export function useLeadsManagement(userId: string) {
   const leadsQuery = useLeadsQuery(userId)
-  const statsQuery = useLeadsStatsQuery(userId)
   const addMutation = useAddLeadMutation(userId)
   const updateMutation = useUpdateLeadMutation(userId)
   const deleteMutation = useDeleteLeadMutation(userId)
@@ -261,9 +260,8 @@ export function useLeadsManagement(userId: string) {
   return {
     // 查询状态
     leads: leadsQuery.data?.data || [],
-    stats: statsQuery.data?.stats || null,
-    isLoading: leadsQuery.isLoading || statsQuery.isLoading,
-    error: leadsQuery.error || statsQuery.error,
+    isLoading: leadsQuery.isLoading,
+    error: leadsQuery.error,
 
     // 变更操作
     addLead: addMutation.mutate,
@@ -280,7 +278,6 @@ export function useLeadsManagement(userId: string) {
     // 刷新数据
     refetch: () => {
       leadsQuery.refetch()
-      statsQuery.refetch()
     }
   }
 }

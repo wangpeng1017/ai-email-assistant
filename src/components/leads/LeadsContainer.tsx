@@ -6,7 +6,6 @@ import { useLeadsManagement } from '@/hooks/useLeadsQuery'
 import { useAppStore } from '@/stores/appStore'
 import { LeadsPageSkeleton } from '@/components/skeletons/LeadsSkeleton'
 import LeadsHeader from './LeadsHeader'
-import LeadsStats from './LeadsStats'
 import LeadsFilters from './LeadsFilters'
 import LeadsTable from './LeadsTable'
 import LeadsPagination from './LeadsPagination'
@@ -35,7 +34,6 @@ const LeadsContainer: React.FC = () => {
 const LeadsContent: React.FC<{ userId: string }> = ({ userId }) => {
   const {
     leads,
-    stats,
     isLoading,
     error,
     addLead,
@@ -90,9 +88,6 @@ const LeadsContent: React.FC<{ userId: string }> = ({ userId }) => {
         isAdding={isAdding}
         isImporting={isImporting}
       />
-
-      {/* 统计卡片 */}
-      <LeadsStats stats={stats} />
 
       {/* 过滤器和搜索 */}
       <LeadsFilters />

@@ -2,7 +2,7 @@
 
 import React from 'react'
 import { useAuth } from '@/contexts/AuthContext'
-import { useMaterialsQuery, useBatchUploadMaterialsMutation } from '@/hooks/useMaterialsQuery'
+import { useMaterialsManagement } from '@/hooks/useMaterialsQuery'
 import { useNotification } from '@/components/Notification'
 import MaterialsHeader from './MaterialsHeader'
 import MaterialsFilters from './MaterialsFilters'
@@ -16,8 +16,13 @@ const MaterialsContainer: React.FC = () => {
   const [showUploadModal, setShowUploadModal] = React.useState(false)
   const { showError } = useNotification()
 
-  const { data: materials, isLoading, error } = useMaterialsQuery(user?.id || '')
-  const batchUploadMutation = useBatchUploadMaterialsMutation()
+  const {
+    materials,
+    isLoading,
+    error,
+    batchUpload,
+    isBatchUploading
+  } = useMaterialsManagement(user?.id || '')
 
   // 处理文件上传 - 使用React Query mutation
   const handleUpload = async (files: FileList): Promise<void> => {
@@ -29,7 +34,7 @@ const MaterialsContainer: React.FC = () => {
 
     // 使用React Query的批量上传mutation，它会自动刷新数据
     return new Promise((resolve, reject) => {
-      batchUploadMutation.mutate(
+      batchUpload(
         { files, userId: user.id },
         {
           onSuccess: () => {
@@ -82,7 +87,7 @@ const MaterialsContainer: React.FC = () => {
         <MaterialsFilters />
 
         <MaterialsGrid
-          materials={materials?.data || []}
+          materials={materials || []}
         />
 
         <MaterialsPagination />

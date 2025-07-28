@@ -64,7 +64,11 @@ export async function GET(request: NextRequest) {
     }
 
     console.log('✅ Successfully retrieved materials:', data?.length || 0, 'items')
-    return NextResponse.json({ materials: data || [] })
+    return NextResponse.json({
+      success: true,
+      data: data || [],
+      total: data?.length || 0
+    })
   } catch (error) {
     console.error('API错误:', error)
     return NextResponse.json(
