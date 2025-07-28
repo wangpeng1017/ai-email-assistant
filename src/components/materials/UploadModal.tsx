@@ -7,9 +7,10 @@ interface UploadModalProps {
   isOpen: boolean
   onClose: () => void
   onUpload: (files: FileList) => Promise<void>
+  onError?: (message: string) => void
 }
 
-export default function UploadModal({ isOpen, onClose, onUpload }: UploadModalProps) {
+export default function UploadModal({ isOpen, onClose, onUpload, onError }: UploadModalProps) {
   const [selectedFiles, setSelectedFiles] = useState<FileList | null>(null)
   const [dragActive, setDragActive] = useState(false)
   const [uploading, setUploading] = useState(false)
@@ -86,30 +87,44 @@ export default function UploadModal({ isOpen, onClose, onUpload }: UploadModalPr
     setUploadProgress(0)
 
     try {
-      // 模拟上传进度
+      console.log('开始上传文件...')
+
+      // 更平滑的进度模拟 - 不限制在90%
       const progressInterval = setInterval(() => {
         setUploadProgress(prev => {
-          if (prev >= 90) {
-            clearInterval(progressInterval)
-            return 90
+          if (prev >= 85) {
+            // 在85%后减慢进度，等待实际上传完成
+            return Math.min(prev + 2, 95)
           }
-          return prev + 10
+          return prev + 8
         })
-      }, 200)
+      }, 150)
 
+      // 执行实际上传
       await onUpload(selectedFiles)
 
+      // 上传成功，清除进度定时器并设置为100%
       clearInterval(progressInterval)
       setUploadProgress(100)
+
+      console.log('上传完成，准备关闭模态框')
 
       // 上传成功后短暂显示完成状态，然后关闭
       setTimeout(() => {
         handleClose()
-      }, 1000)
+      }, 1500)
     } catch (error) {
       console.error('上传失败:', error)
       setUploading(false)
       setUploadProgress(0)
+
+      // 使用回调函数显示错误提示
+      const errorMessage = error instanceof Error ? error.message : '未知错误'
+      if (onError) {
+        onError(`上传失败: ${errorMessage}`)
+      } else {
+        alert(`上传失败: ${errorMessage}`)
+      }
     }
   }, [selectedFiles, onUpload, handleClose])
 
